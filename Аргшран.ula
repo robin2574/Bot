@@ -1,0 +1,1210 @@
+-- ========== NEO CASE FARM V12 (FULL) BY ROBIN ==========
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+
+-- ВСІ КЕЙСИ
+local AllCases = {
+    "Trash", "Daily", "Photon Core", "Divine", "Beggar", "Plodder",
+    "Office Clerk", "Manager", "Director", "Oligarch", "Frozen Heart",
+    "Bubble Gum", "Cats", "Glitch", "Dream", "Bloody Night", "Heavenfall",
+    "M5 F90", "G63", "Porsche 911", "URUS", "Gold", "Dark", "Palm",
+    "Burj", "Luxury", "Marina", "Cursed Demon"
+}
+
+-- КОЛЬОРИ (ФІОЛЕТОВИЙ ДИЗАЙН)
+local Colors = {
+    Primary = Color3.fromRGB(180, 0, 255),   -- Фіолетовий
+    Secondary = Color3.fromRGB(0, 255, 100), -- Зелений неон
+    BgDark = Color3.fromRGB(20, 5, 40),
+    BgLight = Color3.fromRGB(35, 10, 60),
+    TextLight = Color3.fromRGB(220, 220, 255),
+    White = Color3.fromRGB(255, 255, 255),
+    Black = Color3.fromRGB(0, 0, 0),
+    Red = Color3.fromRGB(255, 50, 50),
+}
+
+-- НАЛАШТУВАННЯ
+local Settings = {
+    SelectedCase = "Heavenfall",
+    AutoBuy = false,
+    AutoSell = false,
+    OpenAmount = 10,
+    FarmDelay = 0.01,
+    LuckMultiplier = 2,
+    LuckTime = 5,
+    SaveTime = 5,
+}
+
+-- ЗМІННІ
+local Farming = false
+local LuckActive = false
+local LuckEndTime = 0
+local SaveActive = false
+local SaveEndTime = 0
+local FarmThread = nil
+
+-- ФУНКЦІЯ ОБВОДКИ
+local function addStroke(obj, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Colors.Primary
+    stroke.Thickness = thickness or 1.5
+    stroke.Transparency = 0
+    stroke.Parent = obj
+end
+
+-- ПЕРЕТАСКУВАННЯ
+local function makeDraggable(frame)
+    local dragStart, startPos, dragging = false
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- ========== ОКНО ПАРОЛЯ ==========
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NeoCaseFarm"
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+local passwordFrame = Instance.new("Frame")
+passwordFrame.Parent = screenGui
+passwordFrame.BackgroundColor3 = Colors.BgDark
+passwordFrame.BackgroundTransparency = 0.05
+passwordFrame.BorderSizePixel = 0
+passwordFrame.Position = UDim2.new(0.35, 0, 0.4, 0)
+passwordFrame.Size = UDim2.new(0, 250, 0, 130)
+passwordFrame.Active = true
+addStroke(passwordFrame, Colors.Primary, 2)
+local passCorner = Instance.new("UICorner")
+passCorner.CornerRadius = UDim.new(0, 12)
+passCorner.Parent = passwordFrame
+makeDraggable(passwordFrame)
+
+local passTitle = Instance.new("TextLabel")
+passTitle.Parent = passwordFrame
+passTitle.BackgroundTransparency = 1
+passTitle.Position = UDim2.new(0, 0, 0, 8)
+passTitle.Size = UDim2.new(1, 0, 0, 30)
+passTitle.Font = Enum.Font.GothamBold
+passTitle.Text = "🔐 ВВЕДИТЕ ПАРОЛЬ"
+passTitle.TextColor3 = Colors.Secondary
+passTitle.TextSize = 14
+
+local passBox = Instance.new("TextBox")
+passBox.Parent = passwordFrame
+passBox.BackgroundColor3 = Colors.BgLight
+passBox.BorderSizePixel = 0
+passBox.Position = UDim2.new(0.1, 0, 0.4, 0)
+passBox.Size = UDim2.new(0.8, 0, 0, 30)
+passBox.Font = Enum.Font.Gotham
+passBox.PlaceholderText = "Пароль..."
+passBox.Text = ""
+passBox.TextColor3 = Colors.TextLight
+passBox.TextSize = 12
+addStroke(passBox, Colors.Primary)
+local passBoxCorner = Instance.new("UICorner")
+passBoxCorner.CornerRadius = UDim.new(0, 6)
+passBoxCorner.Parent = passBox
+
+local passBtn = Instance.new("TextButton")
+passBtn.Parent = passwordFrame
+passBtn.BackgroundColor3 = Colors.Secondary
+passBtn.BorderSizePixel = 0
+passBtn.Position = UDim2.new(0.3, 0, 0.75, 0)
+passBtn.Size = UDim2.new(0.4, 0, 0, 28)
+passBtn.Font = Enum.Font.GothamBold
+passBtn.Text = "ВОЙТИ"
+passBtn.TextColor3 = Colors.Black
+passBtn.TextSize = 12
+local passBtnCorner = Instance.new("UICorner")
+passBtnCorner.CornerRadius = UDim.new(0, 6)
+passBtnCorner.Parent = passBtn
+
+local passError = Instance.new("TextLabel")
+passError.Parent = passwordFrame
+passError.BackgroundTransparency = 1
+passError.Position = UDim2.new(0, 0, 0.88, 0)
+passError.Size = UDim2.new(1, 0, 0, 15)
+passError.Font = Enum.Font.Gotham
+passError.Text = ""
+passError.TextColor3 = Colors.Red
+passError.TextSize = 9
+passError.Visible = false
+
+local function checkPassword()
+    if passBox.Text == "mr.comcom" then
+        passwordFrame.Visible = false
+        createMainGUI()
+    else
+        passError.Text = "❌ НЕВЕРНЫЙ ПАРОЛЬ!"
+        passError.Visible = true
+        task.wait(2)
+        passError.Visible = false
+    end
+end
+
+passBtn.MouseButton1Click:Connect(checkPassword)
+passBox.FocusLost:Connect(function(ep)
+    if ep then checkPassword() end
+end)
+
+-- ========== ОСНОВНЕ МЕНЮ ==========
+local mainFrame, caseFrame, settingsFrame, luckFrame, saveFrame = nil, nil, nil, nil, nil
+local luckIcon, saveIcon = nil, nil
+
+function createMainGUI()
+    -- ГОЛОВНЕ МЕНЮ
+    mainFrame = Instance.new("Frame")
+    mainFrame.Parent = screenGui
+    mainFrame.BackgroundColor3 = Colors.BgDark
+    mainFrame.BackgroundTransparency = 0.05
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Position = UDim2.new(0.35, 0, 0.15, 0)
+    mainFrame.Size = UDim2.new(0, 280, 0, 380)
+    mainFrame.Active = true
+    addStroke(mainFrame, Colors.Primary, 2)
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 12)
+    mainCorner.Parent = mainFrame
+    makeDraggable(mainFrame)
+
+    -- ЗАГОЛОВОК
+    local title = Instance.new("TextLabel")
+    title.Parent = mainFrame
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 0, 0, 5)
+    title.Size = UDim2.new(1, 0, 0, 35)
+    title.Font = Enum.Font.GothamBold
+    title.Text = "⚡ NEO CASE FARM ⚡"
+    title.TextColor3 = Colors.Secondary
+    title.TextSize = 16
+
+    -- КНОПКА СВЕРНУТИ (МІНІМІЗАЦІЯ)
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Parent = mainFrame
+    minimizeBtn.BackgroundColor3 = Colors.Secondary
+    minimizeBtn.BorderSizePixel = 0
+    minimizeBtn.Position = UDim2.new(0.86, 0, 0.02, 0)
+    minimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+    minimizeBtn.Font = Enum.Font.GothamBold
+    minimizeBtn.Text = "−"
+    minimizeBtn.TextColor3 = Colors.Black
+    minimizeBtn.TextSize = 20
+    local minCorner = Instance.new("UICorner")
+    minCorner.CornerRadius = UDim.new(0, 7)
+    minCorner.Parent = minimizeBtn
+
+    -- ВИБРАНИЙ КЕЙС
+    local selectedLabel = Instance.new("TextLabel")
+    selectedLabel.Parent = mainFrame
+    selectedLabel.BackgroundColor3 = Colors.BgLight
+    selectedLabel.BorderSizePixel = 0
+    selectedLabel.Position = UDim2.new(0.05, 0, 0.12, 0)
+    selectedLabel.Size = UDim2.new(0.9, 0, 0, 30)
+    selectedLabel.Font = Enum.Font.GothamBold
+    selectedLabel.Text = "📦 " .. Settings.SelectedCase
+    selectedLabel.TextColor3 = Colors.Secondary
+    selectedLabel.TextSize = 11
+    local selCorner = Instance.new("UICorner")
+    selCorner.CornerRadius = UDim.new(0, 6)
+    selCorner.Parent = selectedLabel
+
+    -- КНОПКА ВИБОРУ КЕЙСА
+    local selectCaseBtn = Instance.new("TextButton")
+    selectCaseBtn.Parent = mainFrame
+    selectCaseBtn.BackgroundColor3 = Colors.BgLight
+    selectCaseBtn.BorderSizePixel = 0
+    selectCaseBtn.Position = UDim2.new(0.05, 0, 0.22, 0)
+    selectCaseBtn.Size = UDim2.new(0.9, 0, 0, 32)
+    selectCaseBtn.Font = Enum.Font.GothamBold
+    selectCaseBtn.Text = "📋 ВЫБРАТЬ КЕЙС"
+    selectCaseBtn.TextColor3 = Colors.Primary
+    selectCaseBtn.TextSize = 11
+    addStroke(selectCaseBtn, Colors.Primary)
+    local selBtnCorner = Instance.new("UICorner")
+    selBtnCorner.CornerRadius = UDim.new(0, 6)
+    selBtnCorner.Parent = selectCaseBtn
+
+    -- АВТОПОКУПКА
+    local buyBtn = Instance.new("TextButton")
+    buyBtn.Parent = mainFrame
+    buyBtn.BackgroundColor3 = Colors.BgLight
+    buyBtn.BorderSizePixel = 0
+    buyBtn.Position = UDim2.new(0.05, 0, 0.35, 0)
+    buyBtn.Size = UDim2.new(0.43, 0, 0, 32)
+    buyBtn.Font = Enum.Font.GothamBold
+    buyBtn.Text = "🛍️ ПОКУПКА: ВЫКЛ"
+    buyBtn.TextColor3 = Colors.Red
+    buyBtn.TextSize = 10
+    addStroke(buyBtn, Colors.Primary)
+    local buyCorner = Instance.new("UICorner")
+    buyCorner.CornerRadius = UDim.new(0, 6)
+    buyCorner.Parent = buyBtn
+
+    -- АВТОПРОДАЖА
+    local sellBtn = Instance.new("TextButton")
+    sellBtn.Parent = mainFrame
+    sellBtn.BackgroundColor3 = Colors.BgLight
+    sellBtn.BorderSizePixel = 0
+    sellBtn.Position = UDim2.new(0.52, 0, 0.35, 0)
+    sellBtn.Size = UDim2.new(0.43, 0, 0, 32)
+    sellBtn.Font = Enum.Font.GothamBold
+    sellBtn.Text = "🛒 ПРОДАЖА: ВЫКЛ"
+    sellBtn.TextColor3 = Colors.Red
+    sellBtn.TextSize = 10
+    addStroke(sellBtn, Colors.Primary)
+    local sellCorner = Instance.new("UICorner")
+    sellCorner.CornerRadius = UDim.new(0, 6)
+    sellCorner.Parent = sellBtn
+
+    -- КНОПКА НАЛАШТУВАНЬ
+    local settingsBtn = Instance.new("TextButton")
+    settingsBtn.Parent = mainFrame
+    settingsBtn.BackgroundColor3 = Colors.BgLight
+    settingsBtn.BorderSizePixel = 0
+    settingsBtn.Position = UDim2.new(0.05, 0, 0.48, 0)
+    settingsBtn.Size = UDim2.new(0.9, 0, 0, 32)
+    settingsBtn.Font = Enum.Font.GothamBold
+    settingsBtn.Text = "⚙ НАСТРОЙКИ"
+    settingsBtn.TextColor3 = Colors.Primary
+    settingsBtn.TextSize = 11
+    addStroke(settingsBtn, Colors.Primary)
+    local setCorner = Instance.new("UICorner")
+    setCorner.CornerRadius = UDim.new(0, 6)
+    setCorner.Parent = settingsBtn
+
+    -- СТАРТ/СТОП
+    local startBtn = Instance.new("TextButton")
+    startBtn.Parent = mainFrame
+    startBtn.BackgroundColor3 = Colors.Secondary
+    startBtn.BorderSizePixel = 0
+    startBtn.Position = UDim2.new(0.05, 0, 0.61, 0)
+    startBtn.Size = UDim2.new(0.9, 0, 0, 40)
+    startBtn.Font = Enum.Font.GothamBold
+    startBtn.Text = "▶ СТАРТ ФАРМ"
+    startBtn.TextColor3 = Colors.Black
+    startBtn.TextSize = 13
+    local startCorner = Instance.new("UICorner")
+    startCorner.CornerRadius = UDim.new(0, 8)
+    startCorner.Parent = startBtn
+
+    -- СТАТУС
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Parent = mainFrame
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Position = UDim2.new(0.05, 0, 0.73, 0)
+    statusLabel.Size = UDim2.new(0.9, 0, 0, 18)
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.Text = "⚡ СТОП"
+    statusLabel.TextColor3 = Colors.TextLight
+    statusLabel.TextSize = 10
+
+    -- ІНДИКАТОРИ
+    local luckIndicator = Instance.new("TextLabel")
+    luckIndicator.Parent = mainFrame
+    luckIndicator.BackgroundTransparency = 1
+    luckIndicator.Position = UDim2.new(0.05, 0, 0.8, 0)
+    luckIndicator.Size = UDim2.new(0.45, 0, 0, 16)
+    luckIndicator.Font = Enum.Font.Gotham
+    luckIndicator.Text = "🍀 УДАЧА: НЕТ"
+    luckIndicator.TextColor3 = Colors.TextLight
+    luckIndicator.TextSize = 9
+
+    local saveIndicator = Instance.new("TextLabel")
+    saveIndicator.Parent = mainFrame
+    saveIndicator.BackgroundTransparency = 1
+    saveIndicator.Position = UDim2.new(0.52, 0, 0.8, 0)
+    saveIndicator.Size = UDim2.new(0.45, 0, 0, 16)
+    saveIndicator.Font = Enum.Font.Gotham
+    saveIndicator.Text = "💾 СЕЙВ: НЕТ"
+    saveIndicator.TextColor3 = Colors.TextLight
+    saveIndicator.TextSize = 9
+
+    -- АВТОР
+    local creator = Instance.new("TextLabel")
+    creator.Parent = mainFrame
+    creator.BackgroundTransparency = 1
+    creator.Position = UDim2.new(0.05, 0, 0.88, 0)
+    creator.Size = UDim2.new(0.9, 0, 0, 18)
+    creator.Font = Enum.Font.Gotham
+    creator.Text = "👑 ROBIN"
+    creator.TextColor3 = Colors.Primary
+    creator.TextSize = 10
+
+    -- ========== МЕНЮ ВИБОРУ КЕЙСІВ (ОКРЕМЕ) ==========
+    caseFrame = Instance.new("Frame")
+    caseFrame.Parent = screenGui
+    caseFrame.BackgroundColor3 = Colors.BgDark
+    caseFrame.BackgroundTransparency = 0.05
+    caseFrame.BorderSizePixel = 0
+    caseFrame.Position = UDim2.new(0.35, 0, 0.15, 0)
+    caseFrame.Size = UDim2.new(0, 260, 0, 380)
+    caseFrame.Visible = false
+    caseFrame.Active = true
+    addStroke(caseFrame, Colors.Primary, 2)
+    local caseCorner = Instance.new("UICorner")
+    caseCorner.CornerRadius = UDim.new(0, 10)
+    caseCorner.Parent = caseFrame
+    makeDraggable(caseFrame)
+
+    local caseTitle = Instance.new("TextLabel")
+    caseTitle.Parent = caseFrame
+    caseTitle.BackgroundTransparency = 1
+    caseTitle.Position = UDim2.new(0, 0, 0, 5)
+    caseTitle.Size = UDim2.new(0.7, 0, 0, 30)
+    caseTitle.Font = Enum.Font.GothamBold
+    caseTitle.Text = "📦 ВЫБОР КЕЙСА"
+    caseTitle.TextColor3 = Colors.Secondary
+    caseTitle.TextSize = 14
+
+    local closeCaseBtn = Instance.new("TextButton")
+    closeCaseBtn.Parent = caseFrame
+    closeCaseBtn.BackgroundColor3 = Colors.Red
+    closeCaseBtn.BorderSizePixel = 0
+    closeCaseBtn.Position = UDim2.new(0.86, 0, 0.02, 0)
+    closeCaseBtn.Size = UDim2.new(0, 26, 0, 26)
+    closeCaseBtn.Font = Enum.Font.GothamBold
+    closeCaseBtn.Text = "✕"
+    closeCaseBtn.TextColor3 = Colors.White
+    closeCaseBtn.TextSize = 13
+    local closeCaseCorner = Instance.new("UICorner")
+    closeCaseCorner.CornerRadius = UDim.new(0, 6)
+    closeCaseCorner.Parent = closeCaseBtn
+
+    local caseSearch = Instance.new("TextBox")
+    caseSearch.Parent = caseFrame
+    caseSearch.BackgroundColor3 = Colors.BgLight
+    caseSearch.BorderSizePixel = 0
+    caseSearch.Position = UDim2.new(0.05, 0, 0.12, 0)
+    caseSearch.Size = UDim2.new(0.9, 0, 0, 28)
+    caseSearch.Font = Enum.Font.Gotham
+    caseSearch.PlaceholderText = "🔍 ПОИСК..."
+    caseSearch.Text = ""
+    caseSearch.TextColor3 = Colors.TextLight
+    caseSearch.TextSize = 10
+    addStroke(caseSearch, Colors.Primary)
+    local searchCorner = Instance.new("UICorner")
+    searchCorner.CornerRadius = UDim.new(0, 6)
+    searchCorner.Parent = caseSearch
+
+    local caseScroll = Instance.new("ScrollingFrame")
+    caseScroll.Parent = caseFrame
+    caseScroll.BackgroundColor3 = Colors.BgLight
+    caseScroll.BorderSizePixel = 0
+    caseScroll.Position = UDim2.new(0.05, 0, 0.22, 0)
+    caseScroll.Size = UDim2.new(0.9, 0, 0, 250)
+    caseScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    caseScroll.ScrollBarThickness = 4
+    caseScroll.ScrollBarImageColor3 = Colors.Primary
+    addStroke(caseScroll, Colors.Primary)
+    local scrollCorner = Instance.new("UICorner")
+    scrollCorner.CornerRadius = UDim.new(0, 6)
+    scrollCorner.Parent = caseScroll
+
+    local caseListLayout = Instance.new("UIListLayout")
+    caseListLayout.Parent = caseScroll
+    caseListLayout.Padding = UDim.new(0, 4)
+    caseListLayout.SortOrder = Enum.SortOrder.Name
+
+    local function refreshCaseList(searchText)
+        for _, child in pairs(caseScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        
+        for _, caseName in ipairs(AllCases) do
+            if searchText == "" or string.find(string.lower(caseName), string.lower(searchText)) then
+                local btn = Instance.new("TextButton")
+                btn.Parent = caseScroll
+                btn.BackgroundColor3 = (caseName == Settings.SelectedCase) and Colors.Secondary or Colors.BgDark
+                btn.BorderSizePixel = 0
+                btn.Size = UDim2.new(1, -10, 0, 28)
+                btn.Font = Enum.Font.Gotham
+                btn.Text = caseName
+                btn.TextColor3 = (caseName == Settings.SelectedCase) and Colors.Black or Colors.TextLight
+                btn.TextSize = 10
+                local btnCorner = Instance.new("UICorner")
+                btnCorner.CornerRadius = UDim.new(0, 5)
+                btnCorner.Parent = btn
+                
+                btn.MouseButton1Click:Connect(function()
+                    Settings.SelectedCase = caseName
+                    selectedLabel.Text = "📦 " .. Settings.SelectedCase
+                    caseFrame.Visible = false
+                    refreshCaseList("")
+                end)
+            end
+        end
+    end
+
+    caseSearch:GetPropertyChangedSignal("Text"):Connect(function()
+        refreshCaseList(caseSearch.Text)
+    end)
+
+    closeCaseBtn.MouseButton1Click:Connect(function()
+        caseFrame.Visible = false
+    end)
+
+    selectCaseBtn.MouseButton1Click:Connect(function()
+        caseFrame.Visible = true
+        refreshCaseList("")
+    end)
+
+    -- ========== МЕНЮ НАЛАШТУВАНЬ ==========
+    settingsFrame = Instance.new("Frame")
+    settingsFrame.Parent = screenGui
+    settingsFrame.BackgroundColor3 = Colors.BgDark
+    settingsFrame.BackgroundTransparency = 0.05
+    settingsFrame.BorderSizePixel = 0
+    settingsFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
+    settingsFrame.Size = UDim2.new(0, 280, 0, 360)
+    settingsFrame.Visible = false
+    settingsFrame.Active = true
+    addStroke(settingsFrame, Colors.Primary, 2)
+    local setCornerFrame = Instance.new("UICorner")
+    setCornerFrame.CornerRadius = UDim.new(0, 12)
+    setCornerFrame.Parent = settingsFrame
+    makeDraggable(settingsFrame)
+
+    local setTitle = Instance.new("TextLabel")
+    setTitle.Parent = settingsFrame
+    setTitle.BackgroundTransparency = 1
+    setTitle.Position = UDim2.new(0, 0, 0, 5)
+    setTitle.Size = UDim2.new(0.7, 0, 0, 30)
+    setTitle.Font = Enum.Font.GothamBold
+    setTitle.Text = "⚙ НАСТРОЙКИ"
+    setTitle.TextColor3 = Colors.Secondary
+    setTitle.TextSize = 14
+
+    local closeSetBtn = Instance.new("TextButton")
+    closeSetBtn.Parent = settingsFrame
+    closeSetBtn.BackgroundColor3 = Colors.Red
+    closeSetBtn.BorderSizePixel = 0
+    closeSetBtn.Position = UDim2.new(0.86, 0, 0.02, 0)
+    closeSetBtn.Size = UDim2.new(0, 26, 0, 26)
+    closeSetBtn.Font = Enum.Font.GothamBold
+    closeSetBtn.Text = "✕"
+    closeSetBtn.TextColor3 = Colors.White
+    closeSetBtn.TextSize = 13
+    local closeSetCorner = Instance.new("UICorner")
+    closeSetCorner.CornerRadius = UDim.new(0, 6)
+    closeSetCorner.Parent = closeSetBtn
+
+    -- КІЛЬКІСТЬ КЕЙСІВ
+    local amountLabel = Instance.new("TextLabel")
+    amountLabel.Parent = settingsFrame
+    amountLabel.BackgroundTransparency = 1
+    amountLabel.Position = UDim2.new(0.05, 0, 0.12, 0)
+    amountLabel.Size = UDim2.new(0.5, 0, 0, 25)
+    amountLabel.Font = Enum.Font.Gotham
+    amountLabel.Text = "📦 Кейсов за раз:"
+    amountLabel.TextColor3 = Colors.TextLight
+    amountLabel.TextSize = 10
+
+    local amountBox = Instance.new("TextBox")
+    amountBox.Parent = settingsFrame
+    amountBox.BackgroundColor3 = Colors.BgLight
+    amountBox.BorderSizePixel = 0
+    amountBox.Position = UDim2.new(0.55, 0, 0.12, 0)
+    amountBox.Size = UDim2.new(0.4, 0, 0, 25)
+    amountBox.Font = Enum.Font.GothamBold
+    amountBox.Text = tostring(Settings.OpenAmount)
+    amountBox.TextColor3 = Colors.Secondary
+    amountBox.TextSize = 11
+    addStroke(amountBox, Colors.Primary)
+    local amountCorner = Instance.new("UICorner")
+    amountCorner.CornerRadius = UDim.new(0, 5)
+    amountCorner.Parent = amountBox
+
+    -- ЗАТРИМКА
+    local delayLabel = Instance.new("TextLabel")
+    delayLabel.Parent = settingsFrame
+    delayLabel.BackgroundTransparency = 1
+    delayLabel.Position = UDim2.new(0.05, 0, 0.25, 0)
+    delayLabel.Size = UDim2.new(0.5, 0, 0, 25)
+    delayLabel.Font = Enum.Font.Gotham
+    delayLabel.Text = "⚡ Задержка (сек):"
+    delayLabel.TextColor3 = Colors.TextLight
+    delayLabel.TextSize = 10
+
+    local delayBox = Instance.new("TextBox")
+    delayBox.Parent = settingsFrame
+    delayBox.BackgroundColor3 = Colors.BgLight
+    delayBox.BorderSizePixel = 0
+    delayBox.Position = UDim2.new(0.55, 0, 0.25, 0)
+    delayBox.Size = UDim2.new(0.4, 0, 0, 25)
+    delayBox.Font = Enum.Font.GothamBold
+    delayBox.Text = tostring(Settings.FarmDelay)
+    delayBox.TextColor3 = Colors.Secondary
+    delayBox.TextSize = 11
+    addStroke(delayBox, Colors.Primary)
+    local delayCorner = Instance.new("UICorner")
+    delayCorner.CornerRadius = UDim.new(0, 5)
+    delayCorner.Parent = delayBox
+
+    -- РОЗДІЛЮВАЧ
+    local separator = Instance.new("Frame")
+    separator.Parent = settingsFrame
+    separator.BackgroundColor3 = Colors.Primary
+    separator.BorderSizePixel = 0
+    separator.Position = UDim2.new(0.05, 0, 0.38, 0)
+    separator.Size = UDim2.new(0.9, 0, 0, 1)
+
+    -- КНОПКА УДАЧІ
+    local luckBtn = Instance.new("TextButton")
+    luckBtn.Parent = settingsFrame
+    luckBtn.BackgroundColor3 = Colors.BgLight
+    luckBtn.BorderSizePixel = 0
+    luckBtn.Position = UDim2.new(0.05, 0, 0.45, 0)
+    luckBtn.Size = UDim2.new(0.9, 0, 0, 32)
+    luckBtn.Font = Enum.Font.GothamBold
+    luckBtn.Text = "🍀 НАСТРОЙКИ УДАЧИ"
+    luckBtn.TextColor3 = Colors.Secondary
+    luckBtn.TextSize = 11
+    addStroke(luckBtn, Colors.Primary)
+    local luckBtnCorner = Instance.new("UICorner")
+    luckBtnCorner.CornerRadius = UDim.new(0, 6)
+    luckBtnCorner.Parent = luckBtn
+
+    -- КНОПКА СЕЙВУ
+    local saveSettingsBtn = Instance.new("TextButton")
+    saveSettingsBtn.Parent = settingsFrame
+    saveSettingsBtn.BackgroundColor3 = Colors.BgLight
+    saveSettingsBtn.BorderSizePixel = 0
+    saveSettingsBtn.Position = UDim2.new(0.05, 0, 0.6, 0)
+    saveSettingsBtn.Size = UDim2.new(0.9, 0, 0, 32)
+    saveSettingsBtn.Font = Enum.Font.GothamBold
+    saveSettingsBtn.Text = "💾 НАСТРОЙКИ СЕЙВА"
+    saveSettingsBtn.TextColor3 = Colors.Secondary
+    saveSettingsBtn.TextSize = 11
+    addStroke(saveSettingsBtn, Colors.Primary)
+    local saveBtnCorner = Instance.new("UICorner")
+    saveBtnCorner.CornerRadius = UDim.new(0, 6)
+    saveBtnCorner.Parent = saveSettingsBtn
+
+    -- ========== МЕНЮ УДАЧІ ==========
+    luckFrame = Instance.new("Frame")
+    luckFrame.Parent = screenGui
+    luckFrame.BackgroundColor3 = Colors.BgDark
+    luckFrame.BackgroundTransparency = 0.05
+    luckFrame.BorderSizePixel = 0
+    luckFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+    luckFrame.Size = UDim2.new(0, 240, 0, 200)
+    luckFrame.Visible = false
+    luckFrame.Active = true
+    addStroke(luckFrame, Colors.Primary, 2)
+    local luckCorner = Instance.new("UICorner")
+    luckCorner.CornerRadius = UDim.new(0, 10)
+    luckCorner.Parent = luckFrame
+    makeDraggable(luckFrame)
+
+    local luckTitleFrame = Instance.new("TextLabel")
+    luckTitleFrame.Parent = luckFrame
+    luckTitleFrame.BackgroundTransparency = 1
+    luckTitleFrame.Position = UDim2.new(0, 0, 0, 5)
+    luckTitleFrame.Size = UDim2.new(0.7, 0, 0, 30)
+    luckTitleFrame.Font = Enum.Font.GothamBold
+    luckTitleFrame.Text = "🍀 НАСТРОЙКИ УДАЧИ"
+    luckTitleFrame.TextColor3 = Colors.Secondary
+    luckTitleFrame.TextSize = 13
+
+    local closeLuckBtn = Instance.new("TextButton")
+    closeLuckBtn.Parent = luckFrame
+    closeLuckBtn.BackgroundColor3 = Colors.Red
+    closeLuckBtn.BorderSizePixel = 0
+    closeLuckBtn.Position = UDim2.new(0.86, 0, 0.02, 0)
+    closeLuckBtn.Size = UDim2.new(0, 26, 0, 26)
+    closeLuckBtn.Font = Enum.Font.GothamBold
+    closeLuckBtn.Text = "✕"
+    closeLuckBtn.TextColor3 = Colors.White
+    closeLuckBtn.TextSize = 13
+    local closeLuckCorner = Instance.new("UICorner")
+    closeLuckCorner.CornerRadius = UDim.new(0, 6)
+    closeLuckCorner.Parent = closeLuckBtn
+
+    local multLabel = Instance.new("TextLabel")
+    multLabel.Parent = luckFrame
+    multLabel.BackgroundTransparency = 1
+    multLabel.Position = UDim2.new(0.05, 0, 0.13, 0)
+    multLabel.Size = UDim2.new(0.4, 0, 0, 25)
+    multLabel.Font = Enum.Font.Gotham
+    multLabel.Text = "Множитель:"
+    multLabel.TextColor3 = Colors.TextLight
+    multLabel.TextSize = 10
+
+    local multBtn = Instance.new("TextButton")
+    multBtn.Parent = luckFrame
+    multBtn.BackgroundColor3 = Colors.BgLight
+    multBtn.BorderSizePixel = 0
+    multBtn.Position = UDim2.new(0.55, 0, 0.13, 0)
+    multBtn.Size = UDim2.new(0.4, 0, 0, 25)
+    multBtn.Font = Enum.Font.GothamBold
+    multBtn.Text = "x" .. Settings.LuckMultiplier
+    multBtn.TextColor3 = Colors.Secondary
+    multBtn.TextSize = 11
+    addStroke(multBtn, Colors.Primary)
+    local multCorner = Instance.new("UICorner")
+    multCorner.CornerRadius = UDim.new(0, 5)
+    multCorner.Parent = multBtn
+
+    local multList = Instance.new("ScrollingFrame")
+    multList.Parent = luckFrame
+    multList.BackgroundColor3 = Colors.BgLight
+    multList.BorderSizePixel = 0
+    multList.Position = UDim2.new(0.55, 0, 0.22, 0)
+    multList.Size = UDim2.new(0.4, 0, 0, 60)
+    multList.CanvasSize = UDim2.new(0, 0, 0, 3 * 25)
+    multList.ScrollBarThickness = 3
+    multList.Visible = false
+    addStroke(multList, Colors.Primary)
+    local multListCorner = Instance.new("UICorner")
+    multListCorner.CornerRadius = UDim.new(0, 5)
+    multListCorner.Parent = multList
+
+    local multLayout = Instance.new("UIListLayout")
+    multLayout.Parent = multList
+    multLayout.Padding = UDim.new(0, 2)
+
+    for _, m in ipairs({2, 4, 6}) do
+        local b = Instance.new("TextButton")
+        b.Parent = multList
+        b.BackgroundColor3 = Colors.BgLight
+        b.BorderSizePixel = 0
+        b.Size = UDim2.new(1, 0, 0, 25)
+        b.Font = Enum.Font.GothamBold
+        b.Text = "x" .. m
+        b.TextColor3 = Colors.Secondary
+        b.TextSize = 11
+        local bCorner = Instance.new("UICorner")
+        bCorner.CornerRadius = UDim.new(0, 4)
+        bCorner.Parent = b
+        
+        b.MouseButton1Click:Connect(function()
+            Settings.LuckMultiplier = m
+            multBtn.Text = "x" .. m
+            multList.Visible = false
+        end)
+    end
+
+    multBtn.MouseButton1Click:Connect(function()
+        multList.Visible = not multList.Visible
+    end)
+
+    local luckTimeLabel = Instance.new("TextLabel")
+    luckTimeLabel.Parent = luckFrame
+    luckTimeLabel.BackgroundTransparency = 1
+    luckTimeLabel.Position = UDim2.new(0.05, 0, 0.32, 0)
+    luckTimeLabel.Size = UDim2.new(0.4, 0, 0, 25)
+    luckTimeLabel.Font = Enum.Font.Gotham
+    luckTimeLabel.Text = "Время (мин):"
+    luckTimeLabel.TextColor3 = Colors.TextLight
+    luckTimeLabel.TextSize = 10
+
+    local luckTimeBox = Instance.new("TextBox")
+    luckTimeBox.Parent = luckFrame
+    luckTimeBox.BackgroundColor3 = Colors.BgLight
+    luckTimeBox.BorderSizePixel = 0
+    luckTimeBox.Position = UDim2.new(0.55, 0, 0.32, 0)
+    luckTimeBox.Size = UDim2.new(0.4, 0, 0, 25)
+    luckTimeBox.Font = Enum.Font.GothamBold
+    luckTimeBox.Text = tostring(Settings.LuckTime)
+    luckTimeBox.TextColor3 = Colors.Secondary
+    luckTimeBox.TextSize = 11
+    addStroke(luckTimeBox, Colors.Primary)
+    local luckTimeCorner = Instance.new("UICorner")
+    luckTimeCorner.CornerRadius = UDim.new(0, 5)
+    luckTimeCorner.Parent = luckTimeBox
+
+    local startLuckActBtn = Instance.new("TextButton")
+    startLuckActBtn.Parent = luckFrame
+    startLuckActBtn.BackgroundColor3 = Colors.Secondary
+    startLuckActBtn.BorderSizePixel = 0
+    startLuckActBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+    startLuckActBtn.Size = UDim2.new(0.9, 0, 0, 35)
+    startLuckActBtn.Font = Enum.Font.GothamBold
+    startLuckActBtn.Text = "🍀 ЗАПУСТИТЬ УДАЧУ"
+    startLuckActBtn.TextColor3 = Colors.Black
+    startLuckActBtn.TextSize = 12
+    local startLuckCorner = Instance.new("UICorner")
+    startLuckCorner.CornerRadius = UDim.new(0, 6)
+    startLuckCorner.Parent = startLuckActBtn
+
+    -- ========== МЕНЮ СЕЙВУ ==========
+    saveFrame = Instance.new("Frame")
+    saveFrame.Parent = screenGui
+    saveFrame.BackgroundColor3 = Colors.BgDark
+    saveFrame.BackgroundTransparency = 0.05
+    saveFrame.BorderSizePixel = 0
+    saveFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
+    saveFrame.Size = UDim2.new(0, 240, 0, 160)
+    saveFrame.Visible = false
+    saveFrame.Active = true
+    addStroke(saveFrame, Colors.Primary, 2)
+    local saveCornerFrame = Instance.new("UICorner")
+    saveCornerFrame.CornerRadius = UDim.new(0, 10)
+    saveCornerFrame.Parent = saveFrame
+    makeDraggable(saveFrame)
+
+    local saveTitleFrame = Instance.new("TextLabel")
+    saveTitleFrame.Parent = saveFrame
+    saveTitleFrame.BackgroundTransparency = 1
+    saveTitleFrame.Position = UDim2.new(0, 0, 0, 5)
+    saveTitleFrame.Size = UDim2.new(0.7, 0, 0, 30)
+    saveTitleFrame.Font = Enum.Font.GothamBold
+    saveTitleFrame.Text = "💾 НАСТРОЙКИ СЕЙВА"
+    saveTitleFrame.TextColor3 = Colors.Secondary
+    saveTitleFrame.TextSize = 13
+
+    local closeSaveBtn = Instance.new("TextButton")
+    closeSaveBtn.Parent = saveFrame
+    closeSaveBtn.BackgroundColor3 = Colors.Red
+    closeSaveBtn.BorderSizePixel = 0
+    closeSaveBtn.Position = UDim2.new(0.86, 0, 0.02, 0)
+    closeSaveBtn.Size = UDim2.new(0, 26, 0, 26)
+    closeSaveBtn.Font = Enum.Font.GothamBold
+    closeSaveBtn.Text = "✕"
+    closeSaveBtn.TextColor3 = Colors.White
+    closeSaveBtn.TextSize = 13
+    local closeSaveCorner = Instance.new("UICorner")
+    closeSaveCorner.CornerRadius = UDim.new(0, 6)
+    closeSaveCorner.Parent = closeSaveBtn
+
+    local saveTimeLabel = Instance.new("TextLabel")
+    saveTimeLabel.Parent = saveFrame
+    saveTimeLabel.BackgroundTransparency = 1
+    saveTimeLabel.Position = UDim2.new(0.05, 0, 0.13, 0)
+    saveTimeLabel.Size = UDim2.new(0.4, 0, 0, 25)
+    saveTimeLabel.Font = Enum.Font.Gotham
+    saveTimeLabel.Text = "Время (мин):"
+    saveTimeLabel.TextColor3 = Colors.TextLight
+    saveTimeLabel.TextSize = 10
+
+    local saveTimeBox = Instance.new("TextBox")
+    saveTimeBox.Parent = saveFrame
+    saveTimeBox.BackgroundColor3 = Colors.BgLight
+    saveTimeBox.BorderSizePixel = 0
+    saveTimeBox.Position = UDim2.new(0.55, 0, 0.13, 0)
+    saveTimeBox.Size = UDim2.new(0.4, 0, 0, 25)
+    saveTimeBox.Font = Enum.Font.GothamBold
+    saveTimeBox.Text = tostring(Settings.SaveTime)
+    saveTimeBox.TextColor3 = Colors.Secondary
+    saveTimeBox.TextSize = 11
+    addStroke(saveTimeBox, Colors.Primary)
+    local saveTimeCorner = Instance.new("UICorner")
+    saveTimeCorner.CornerRadius = UDim.new(0, 5)
+    saveTimeCorner.Parent = saveTimeBox
+
+    local startSaveActBtn = Instance.new("TextButton")
+    startSaveActBtn.Parent = saveFrame
+    startSaveActBtn.BackgroundColor3 = Colors.Secondary
+    startSaveActBtn.BorderSizePixel = 0
+    startSaveActBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
+    startSaveActBtn.Size = UDim2.new(0.9, 0, 0, 35)
+    startSaveActBtn.Font = Enum.Font.GothamBold
+    startSaveActBtn.Text = "💾 ЗАПУСТИТЬ СЕЙВ"
+    startSaveActBtn.TextColor3 = Colors.Black
+    startSaveActBtn.TextSize = 12
+    local startSaveCorner = Instance.new("UICorner")
+    startSaveCorner.CornerRadius = UDim.new(0, 6)
+    startSaveCorner.Parent = startSaveActBtn
+
+    -- ========== ІКОНКИ В ПРАВОМУ НИЖНЬОМУ КУТКУ ==========
+    -- Іконка удачі (клевер)
+    luckIcon = Instance.new("Frame")
+    luckIcon.Parent = screenGui
+    luckIcon.BackgroundColor3 = Colors.BgDark
+    luckIcon.BackgroundTransparency = 0.1
+    luckIcon.BorderSizePixel = 0
+    luckIcon.Size = UDim2.new(0, 55, 0, 65)
+    luckIcon.Visible = false
+    addStroke(luckIcon, Colors.Secondary, 2)
+    local luckIconCorner = Instance.new("UICorner")
+    luckIconCorner.CornerRadius = UDim.new(0, 10)
+    luckIconCorner.Parent = luckIcon
+    makeDraggable(luckIcon)
+
+    local luckIconEmoji = Instance.new("TextLabel")
+    luckIconEmoji.Parent = luckIcon
+    luckIconEmoji.BackgroundTransparency = 1
+    luckIconEmoji.Size = UDim2.new(1, 0, 0.5, 0)
+    luckIconEmoji.Font = Enum.Font.GothamBold
+    luckIconEmoji.Text = "🍀"
+    luckIconEmoji.TextColor3 = Colors.Secondary
+    luckIconEmoji.TextSize = 26
+
+    local luckIconTimerLabel = Instance.new("TextLabel")
+    luckIconTimerLabel.Parent = luckIcon
+    luckIconTimerLabel.BackgroundTransparency = 1
+    luckIconTimerLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    luckIconTimerLabel.Size = UDim2.new(1, 0, 0, 20)
+    luckIconTimerLabel.Font = Enum.Font.GothamBold
+    luckIconTimerLabel.Text = "5:00"
+    luckIconTimerLabel.TextColor3 = Colors.Secondary
+    luckIconTimerLabel.TextSize = 11
+
+    local luckIconMultLabel = Instance.new("TextLabel")
+    luckIconMultLabel.Parent = luckIcon
+    luckIconMultLabel.BackgroundTransparency = 1
+    luckIconMultLabel.Position = UDim2.new(0, 0, 0.35, 0)
+    luckIconMultLabel.Size = UDim2.new(1, 0, 0, 12)
+    luckIconMultLabel.Font = Enum.Font.GothamBold
+    luckIconMultLabel.Text = "x2"
+    luckIconMultLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+    luckIconMultLabel.TextSize = 9
+
+    local luckIconCloseBtn = Instance.new("TextButton")
+    luckIconCloseBtn.Parent = luckIcon
+    luckIconCloseBtn.BackgroundColor3 = Colors.White
+    luckIconCloseBtn.BackgroundTransparency = 0.3
+    luckIconCloseBtn.BorderSizePixel = 0
+    luckIconCloseBtn.Position = UDim2.new(0.7, 0, 0.02, 0)
+    luckIconCloseBtn.Size = UDim2.new(0, 16, 0, 16)
+    luckIconCloseBtn.Font = Enum.Font.GothamBold
+    luckIconCloseBtn.Text = "✕"
+    luckIconCloseBtn.TextColor3 = Colors.White
+    luckIconCloseBtn.TextSize = 10
+    local luckIconCloseCorner = Instance.new("UICorner")
+    luckIconCloseCorner.CornerRadius = UDim.new(0, 8)
+    luckIconCloseCorner.Parent = luckIconCloseBtn
+
+    -- Іконка сейву (білий хрест)
+    saveIcon = Instance.new("Frame")
+    saveIcon.Parent = screenGui
+    saveIcon.BackgroundColor3 = Colors.BgDark
+    saveIcon.BackgroundTransparency = 0.1
+    saveIcon.BorderSizePixel = 0
+    saveIcon.Size = UDim2.new(0, 50, 0, 55)
+    saveIcon.Visible = false
+    addStroke(saveIcon, Colors.White, 2)
+    local saveIconCorner = Instance.new("UICorner")
+    saveIconCorner.CornerRadius = UDim.new(0, 10)
+    saveIconCorner.Parent = saveIcon
+    makeDraggable(saveIcon)
+
+    local saveIconEmoji = Instance.new("TextLabel")
+    saveIconEmoji.Parent = saveIcon
+    saveIconEmoji.BackgroundTransparency = 1
+    saveIconEmoji.Size = UDim2.new(1, 0, 0.55, 0)
+    saveIconEmoji.Font = Enum.Font.GothamBold
+    saveIconEmoji.Text = "✕"
+    saveIconEmoji.TextColor3 = Colors.White
+    saveIconEmoji.TextSize = 26
+
+    local saveIconTimerLabel = Instance.new("TextLabel")
+    saveIconTimerLabel.Parent = saveIcon
+    saveIconTimerLabel.BackgroundTransparency = 1
+    saveIconTimerLabel.Position = UDim2.new(0, 0, 0.55, 0)
+    saveIconTimerLabel.Size = UDim2.new(1, 0, 0, 18)
+    saveIconTimerLabel.Font = Enum.Font.GothamBold
+    saveIconTimerLabel.Text = "5:00"
+    saveIconTimerLabel.TextColor3 = Colors.White
+    saveIconTimerLabel.TextSize = 11
+
+    local saveIconCloseBtn = Instance.new("TextButton")
+    saveIconCloseBtn.Parent = saveIcon
+    saveIconCloseBtn.BackgroundColor3 = Colors.White
+    saveIconCloseBtn.BackgroundTransparency = 0.3
+    saveIconCloseBtn.BorderSizePixel = 0
+    saveIconCloseBtn.Position = UDim2.new(0.7, 0, 0.02, 0)
+    saveIconCloseBtn.Size = UDim2.new(0, 16, 0, 16)
+    saveIconCloseBtn.Font = Enum.Font.GothamBold
+    saveIconCloseBtn.Text = "✕"
+    saveIconCloseBtn.TextColor3 = Colors.White
+    saveIconCloseBtn.TextSize = 10
+    local saveIconCloseCorner = Instance.new("UICorner")
+    saveIconCloseCorner.CornerRadius = UDim.new(0, 8)
+    saveIconCloseCorner.Parent = saveIconCloseBtn
+
+    -- ========== ФУНКЦІЇ ОНОВЛЕННЯ ПОЗИЦІЙ ==========
+    local function updateIconPositions()
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        local luckPos = UDim2.new(1, -70, 1, -80)
+        local savePos = UDim2.new(1, -130, 1, -80)
+        
+        if LuckActive and SaveActive then
+            luckIcon.Position = UDim2.new(1, -70, 1, -80)
+            saveIcon.Position = UDim2.new(1, -130, 1, -80)
+        elseif LuckActive then
+            luckIcon.Position = UDim2.new(1, -70, 1, -80)
+        elseif SaveActive then
+            saveIcon.Position = UDim2.new(1, -70, 1, -80)
+        end
+    end
+
+    local function updateLuckTimer()
+        if LuckActive then
+            local remaining = LuckEndTime - os.time()
+            if remaining <= 0 then
+                LuckActive = false
+                luckIcon.Visible = false
+                luckIndicator.Text = "🍀 УДАЧА: НЕТ"
+                luckIndicator.TextColor3 = Colors.TextLight
+                updateIconPositions()
+            else
+                local minutes = math.floor(remaining / 60)
+                local seconds = remaining % 60
+                luckIconTimerLabel.Text = string.format("%d:%02d", minutes, seconds)
+                luckIndicator.Text = "🍀 УДАЧА: " .. string.format("%d:%02d", minutes, seconds)
+                luckIndicator.TextColor3 = Colors.Secondary
+            end
+        end
+    end
+
+    local function updateSaveTimer()
+        if SaveActive then
+            local remaining = SaveEndTime - os.time()
+            if remaining <= 0 then
+                SaveActive = false
+                saveIcon.Visible = false
+                saveIndicator.Text = "💾 СЕЙВ: НЕТ"
+                saveIndicator.TextColor3 = Colors.TextLight
+                updateIconPositions()
+            else
+                local minutes = math.floor(remaining / 60)
+                local seconds = remaining % 60
+                saveIconTimerLabel.Text = string.format("%d:%02d", minutes, seconds)
+                saveIndicator.Text = "💾 СЕЙВ: " .. string.format("%d:%02d", minutes, seconds)
+                saveIndicator.TextColor3 = Colors.Secondary
+            end
+        end
+    end
+
+    local function updateUI()
+        buyBtn.Text = Settings.AutoBuy and "🛍️ ПОКУПКА: ВКЛ" or "🛍️ ПОКУПКА: ВЫКЛ"
+        buyBtn.TextColor3 = Settings.AutoBuy and Colors.Secondary or Colors.Red
+        
+        sellBtn.Text = Settings.AutoSell and "🛒 ПРОДАЖА: ВКЛ" or "🛒 ПРОДАЖА: ВЫКЛ"
+        sellBtn.TextColor3 = Settings.AutoSell and Colors.Secondary or Colors.Red
+    end
+
+    local function farmLoop()
+        while Farming do
+            pcall(function()
+                local events = ReplicatedStorage:FindFirstChild("Events")
+                if events then
+                    local openCase = events:FindFirstChild("OpenCase")
+                    if openCase then
+                        openCase:InvokeServer(Settings.SelectedCase, Settings.OpenAmount)
+                    end
+                    
+                    if Settings.AutoSell then
+                        local inventory = events:FindFirstChild("Inventory")
+                        if inventory then
+                            inventory:FireServer("Sell", "ALL")
+                        end
+                    end
+                    
+                    if Settings.AutoBuy then
+                        local buyCase = events:FindFirstChild("BuyCase")
+                        if buyCase then
+                            buyCase:InvokeServer(Settings.SelectedCase, 1)
+                        end
+                    end
+                end
+            end)
+            task.wait(Settings.FarmDelay)
+        end
+    end
+
+    -- ========== ОБРОБНИКИ ПОДІЙ ==========
+    minimizeBtn.MouseButton1Click:Connect(function()
+        mainFrame.Visible = false
+    end)
+
+    -- Відновлення головного меню (можна додати кнопку на екрані або хоткей)
+    -- Для простоти, додамо маленьку кнопку для відновлення
+    local restoreBtn = Instance.new("TextButton")
+    restoreBtn.Parent = screenGui
+    restoreBtn.BackgroundColor3 = Colors.Primary
+    restoreBtn.BackgroundTransparency = 0.2
+    restoreBtn.BorderSizePixel = 0
+    restoreBtn.Position = UDim2.new(0.02, 0, 0.85, 0)
+    restoreBtn.Size = UDim2.new(0, 40, 0, 40)
+    restoreBtn.Font = Enum.Font.GothamBold
+    restoreBtn.Text = "📦"
+    restoreBtn.TextColor3 = Colors.White
+    restoreBtn.TextSize = 20
+    local restoreCorner = Instance.new("UICorner")
+    restoreCorner.CornerRadius = UDim.new(0, 20)
+    restoreCorner.Parent = restoreBtn
+    makeDraggable(restoreBtn)
+    restoreBtn.MouseButton1Click:Connect(function()
+        mainFrame.Visible = true
+    end)
+
+    buyBtn.MouseButton1Click:Connect(function()
+        Settings.AutoBuy = not Settings.AutoBuy
+        updateUI()
+    end)
+
+    sellBtn.MouseButton1Click:Connect(function()
+        Settings.AutoSell = not Settings.AutoSell
+        updateUI()
+    end)
+
+    settingsBtn.MouseButton1Click:Connect(function()
+        settingsFrame.Visible = true
+    end)
+
+    closeSetBtn.MouseButton1Click:Connect(function()
+        settingsFrame.Visible = false
+    end)
+
+    luckBtn.MouseButton1Click:Connect(function()
+        luckFrame.Visible = true
+        luckTimeBox.Text = tostring(Settings.LuckTime)
+    end)
+
+    closeLuckBtn.MouseButton1Click:Connect(function()
+        luckFrame.Visible = false
+        multList.Visible = false
+    end)
+
+    saveSettingsBtn.MouseButton1Click:Connect(function()
+        saveFrame.Visible = true
+        saveTimeBox.Text = tostring(Settings.SaveTime)
+    end)
+
+    closeSaveBtn.MouseButton1Click:Connect(function()
+        saveFrame.Visible = false
+    end)
+
+    startBtn.MouseButton1Click:Connect(function()
+        if not Farming then
+            Farming = true
+            startBtn.Text = "⏹ СТОП ФАРМ"
+            statusLabel.Text = "⚡ ФАРМ АКТИВЕН"
+            statusLabel.TextColor3 = Colors.Secondary
+            FarmThread = task.spawn(farmLoop)
+        else
+            Farming = false
+            if FarmThread then task.cancel(FarmThread) end
+            startBtn.Text = "▶ СТАРТ ФАРМ"
+            statusLabel.Text = "⚡ СТОП"
+            statusLabel.TextColor3 = Colors.TextLight
+        end
+    end)
+
+    amountBox.FocusLost:Connect(function()
+        local num = tonumber(amountBox.Text)
+        if num and num >= 1 and num <= 10 then
+            Settings.OpenAmount = math.floor(num)
+            amountBox.Text = tostring(Settings.OpenAmount)
+        else
+            amountBox.Text = tostring(Settings.OpenAmount)
+        end
+    end)
+
+    delayBox.FocusLost:Connect(function()
+        local num = tonumber(delayBox.Text)
+        if num and num >= 0.001 then
+            Settings.FarmDelay = num
+            delayBox.Text = tostring(Settings.FarmDelay)
+        else
+            delayBox.Text = tostring(Settings.FarmDelay)
+        end
+    end)
+
+    luckTimeBox.FocusLost:Connect(function()
+        local num = tonumber(luckTimeBox.Text)
+        if num and num >= 1 and num <= 60 then
+            Settings.LuckTime = math.floor(num)
+            luckTimeBox.Text = tostring(Settings.LuckTime)
+        else
+            luckTimeBox.Text = tostring(Settings.LuckTime)
+        end
+    end)
+
+    saveTimeBox.FocusLost:Connect(function()
+        local num = tonumber(saveTimeBox.Text)
+        if num and num >= 1 and num <= 60 then
+            Settings.SaveTime = math.floor(num)
+            saveTimeBox.Text = tostring(Settings.SaveTime)
+        else
+            saveTimeBox.Text = tostring(Settings.SaveTime)
+        end
+    end)
+
+    startLuckActBtn.MouseButton1Click:Connect(function()
+        local timeMin = tonumber(luckTimeBox.Text) or 5
+        if timeMin < 1 then timeMin = 1 end
+        if timeMin > 60 then timeMin = 60 end
+        
+        LuckActive = true
+        LuckEndTime = os.time() + (timeMin * 60)
+        luckIcon.Visible = true
+        luckIconMultLabel.Text = "x" .. Settings.LuckMultiplier
+        luckFrame.Visible = false
+        updateIconPositions()
+    end)
+
+    startSaveActBtn.MouseButton1Click:Connect(function()
+        local timeMin = tonumber(saveTimeBox.Text) or 5
+        if timeMin < 1 then timeMin = 1 end
+        if timeMin > 60 then timeMin = 60 end
+        
+        SaveActive = true
+        SaveEndTime = os.time() + (timeMin * 60)
+        saveIcon.Visible = true
+        saveFrame.Visible = false
+        updateIconPositions()
+    end)
+
+    luckIconCloseBtn.MouseButton1Click:Connect(function()
+        LuckActive = false
+        luckIcon.Visible = false
+        luckIndicator.Text = "🍀 УДАЧА: НЕТ"
+        luckIndicator.TextColor3 = Colors.TextLight
+        updateIconPositions()
+    end)
+
+    saveIconCloseBtn.MouseButton1Click:Connect(function()
+        SaveActive = false
+        saveIcon.Visible = false
+        saveIndicator.Text = "💾 СЕЙВ: НЕТ"
+        saveIndicator.TextColor3 = Colors.TextLight
+        updateIconPositions()
+    end)
+
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            multList.Visible = false
+        end
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        updateLuckTimer()
+        updateSaveTimer()
+    end)
+
+    -- ========== ІНІЦІАЛІЗАЦІЯ ==========
+    updateUI()
+    amountBox.Text = tostring(Settings.OpenAmount)
+    delayBox.Text = tostring(Settings.FarmDelay)
+    luckTimeBox.Text = tostring(Settings.LuckTime)
+    saveTimeBox.Text = tostring(Settings.SaveTime)
+    multBtn.Text = "x" .. Settings.LuckMultiplier
+    selectedLabel.Text = "📦 " .. Settings.SelectedCase
+
+    print("✅ NEO CASE FARM V12 LOADED!")
+    print("📦 Фіолетовий дизайн | Пароль: mr.comcom")
+    print("🍀 УДАЧА і 💾 СЕЙВ - окремі меню в налаштуваннях")
+end
