@@ -1,0 +1,533 @@
+-- ========== ДРОЧИЛЬНЯ ROBINA - TON CASE FARM + БАТЛ ==========
+-- АВТОР: TROTULOV39
+-- ВЕРСИЯ: 4.0 (БАТЛЫ КАК КЕЙСЫ)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local vim = game:GetService("VirtualInputManager")
+
+-- ========== БАЗА ДАННЫХ КЕЙСОВ ==========
+local CasesDatabase = {
+    {Name = "Trash", Price = 0}, {Name = "Daily", Price = 0},
+    {Name = "Beggar", Price = 220}, {Name = "Plodder", Price = 444},
+    {Name = "Office Clerk", Price = 689}, {Name = "Manager", Price = 835},
+    {Name = "Director", Price = 926}, {Name = "Oligarch", Price = 1364},
+    {Name = "Gold", Price = 1999}, {Name = "Frozen Heart", Price = 4500},
+    {Name = "Dark", Price = 4999}, {Name = "Bubble Gum", Price = 12000},
+    {Name = "Palm", Price = 13999}, {Name = "Burj", Price = 37999},
+    {Name = "Cats", Price = 40000}, {Name = "M5 F90", Price = 55555},
+    {Name = "Luxury", Price = 119999}, {Name = "Glitch", Price = 135000},
+    {Name = "G63", Price = 177777}, {Name = "Dream", Price = 250000},
+    {Name = "Porsche 911", Price = 599999}, {Name = "URUS", Price = 1666666},
+    {Name = "Bloody Night", Price = 5000000}, {Name = "Marina", Price = 12999999},
+    {Name = "Abyss Core", Price = 33000000}, {Name = "Cursed Demon", Price = 36666666},
+    {Name = "Heavenfall", Price = 64000000}, {Name = "Photon Core", Price = 43333},
+    {Name = "Divine", Price = 500000}, {Name = "Sunny Day", Price = 1000},
+    {Name = "Radioactive", Price = 31111111}
+}
+
+-- ========== КООРДИНАТЫ ДЛЯ БАТЛА ==========
+local Coords = {
+    BattlesBtn = {540, 2100}, CreateBattle = {540, 1600},
+    AddCase = {950, 420}, CaseSlot = {540, 700},
+    CreateBtn = {540, 2180}, PlayBot = {540, 2000},
+    Cases = {
+        Beggar = 850, Plodder = 930, Office_Clerk = 1010, Manager = 1090,
+        Director = 1170, Oligarch = 1250, Gold = 1330, Frozen_Heart = 1410,
+        Dark = 1490, Bubble_Gum = 1570, Palm = 1650, Burj = 1730,
+        Cats = 850, M5_F90 = 930, Luxury = 1010, Glitch = 1090,
+        G63 = 1170, Dream = 1250, Porsche_911 = 1330, URUS = 1410,
+        Bloody_Night = 1490, Marina = 1570, Radioactive = 1650, Abyss_Core = 1730,
+        Cursed_Demon = 850, Heavenfall = 930
+    }
+}
+
+-- ========== ПЕРЕМЕННЫЕ ==========
+local SelectedCases = {}           -- Выбранные кейсы для фарма
+local Farming = false
+local AutoSellEnabled = false
+local AutoBattle = false
+local BattleCaseAmount = 3
+local BattleSelectedCase = "Radioactive"
+local BattleDelay = 35
+local LuckActive = false
+local LuckMultiplier = 2
+local LuckEndTime = 0
+local OpenAmount = 1
+local FarmDelay = 0.01
+
+-- ========== ФУНКЦИИ ==========
+local function formatPrice(value, mult)
+    local total = value * (mult or 1)
+    if total == 0 then return "FREE" end
+    local str = tostring(math.floor(total))
+    local result = ""
+    for i = #str, 1, -1 do
+        if (#str - i) % 3 == 0 and i ~= #str then result = "," .. result end
+        result = str:sub(i, i) .. result
+    end
+    return result
+end
+
+local function Click(x, y)
+    pcall(function()
+        vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
+        task.wait(0.05)
+        vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
+    end)
+end
+
+local function SelectBattleCase(caseName)
+    local y = Coords.Cases[caseName:gsub(" ", "_"):gsub("'", "")]
+    if y then Click(540, y); return true end
+    return false
+end
+
+local function CreateBattle()
+    pcall(function()
+        Click(Coords.BattlesBtn[1], Coords.BattlesBtn[2]); task.wait(1)
+        Click(Coords.CreateBattle[1], Coords.CreateBattle[2]); task.wait(1)
+        for i = 1, BattleCaseAmount do
+            Click(Coords.AddCase[1], Coords.AddCase[2]); task.wait(0.5)
+            Click(Coords.CaseSlot[1], Coords.CaseSlot[2]); task.wait(0.3)
+        end
+        SelectBattleCase(BattleSelectedCase); task.wait(0.5)
+        Click(Coords.CreateBtn[1], Coords.CreateBtn[2]); task.wait(1.5)
+        Click(Coords.PlayBot[1], Coords.PlayBot[2])
+    end)
+end
+
+local function AutoBattleLoop()
+    while AutoBattle do CreateBattle(); task.wait(BattleDelay) end
+end
+
+local function FarmLoop()
+    while Farming do
+        pcall(function()
+            local Events = ReplicatedStorage:FindFirstChild("Events")
+            if Events and Events:FindFirstChild("OpenCase") and #SelectedCases > 0 then
+                local OpenCase = Events.OpenCase
+                for _, caseName in pairs(SelectedCases) do
+                    if OpenCase:IsA("RemoteFunction") then
+                        OpenCase:InvokeServer(caseName, OpenAmount)
+                    else
+                        OpenCase:FireServer(caseName, OpenAmount)
+                    end
+                    task.wait(0.1)
+                end
+            end
+            if AutoSellEnabled and Events and Events:FindFirstChild("Inventory") then
+                Events.Inventory:FireServer("Sell", "ALL")
+            end
+        end)
+        task.wait(FarmDelay)
+    end
+end
+
+-- ========== GUI ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Drochilnya_Robina"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.new(0, 360, 0, 560)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -280)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BackgroundTransparency = 0.1
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(0, 255, 100)
+Stroke.Thickness = 2
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Text = "💀 ДРОЧИЛЬНЯ ROBINA 💀"
+Title.TextColor3 = Color3.fromRGB(0, 255, 100)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-- ========== ВКЛАДКИ ==========
+local TabFrame = Instance.new("Frame")
+TabFrame.Parent = MainFrame
+TabFrame.Size = UDim2.new(1, 0, 0, 35)
+TabFrame.Position = UDim2.new(0, 0, 0, 38)
+TabFrame.BackgroundTransparency = 1
+
+local CasesTab = Instance.new("TextButton")
+CasesTab.Parent = TabFrame
+CasesTab.Size = UDim2.new(0.5, -2, 1, 0)
+CasesTab.Position = UDim2.new(0, 0, 0, 0)
+CasesTab.Text = "📦 КЕЙСЫ"
+CasesTab.BackgroundColor3 = Color3.fromRGB(30, 40, 30)
+CasesTab.TextColor3 = Color3.fromRGB(0, 255, 100)
+CasesTab.Font = Enum.Font.GothamBold
+CasesTab.TextSize = 13
+Instance.new("UICorner", CasesTab).CornerRadius = UDim.new(0, 6)
+
+local BattlesTab = Instance.new("TextButton")
+BattlesTab.Parent = TabFrame
+BattlesTab.Size = UDim2.new(0.5, -2, 1, 0)
+BattlesTab.Position = UDim2.new(0.5, 2, 0, 0)
+BattlesTab.Text = "⚔️ БАТЛЫ"
+BattlesTab.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+BattlesTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+BattlesTab.Font = Enum.Font.GothamBold
+BattlesTab.TextSize = 13
+Instance.new("UICorner", BattlesTab).CornerRadius = UDim.new(0, 6)
+
+-- ========== ПАНЕЛЬ КЕЙСОВ ==========
+local CasesPanel = Instance.new("ScrollingFrame")
+CasesPanel.Parent = MainFrame
+CasesPanel.Size = UDim2.new(0.94, 0, 0, 300)
+CasesPanel.Position = UDim2.new(0.03, 0, 0.16, 0)
+CasesPanel.BackgroundColor3 = Color3.fromRGB(15, 20, 10)
+CasesPanel.BorderSizePixel = 0
+CasesPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+CasesPanel.ScrollBarThickness = 3
+Instance.new("UICorner", CasesPanel).CornerRadius = UDim.new(0, 6)
+
+local CasesLayout = Instance.new("UIListLayout")
+CasesLayout.Parent = CasesPanel
+CasesLayout.Padding = UDim.new(0, 3)
+
+-- ========== ПАНЕЛЬ БАТЛОВ ==========
+local BattlesPanel = Instance.new("ScrollingFrame")
+BattlesPanel.Parent = MainFrame
+BattlesPanel.Size = UDim2.new(0.94, 0, 0, 300)
+BattlesPanel.Position = UDim2.new(0.03, 0, 0.16, 0)
+BattlesPanel.BackgroundColor3 = Color3.fromRGB(15, 20, 10)
+BattlesPanel.BorderSizePixel = 0
+BattlesPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
+BattlesPanel.ScrollBarThickness = 3
+BattlesPanel.Visible = false
+Instance.new("UICorner", BattlesPanel).CornerRadius = UDim.new(0, 6)
+
+local BattlesLayout = Instance.new("UIListLayout")
+BattlesLayout.Parent = BattlesPanel
+BattlesLayout.Padding = UDim.new(0, 3)
+
+-- ========== КНОПКИ УПРАВЛЕНИЯ ==========
+local FarmBtn = Instance.new("TextButton")
+FarmBtn.Parent = MainFrame
+FarmBtn.Size = UDim2.new(0.23, -5, 0, 40)
+FarmBtn.Position = UDim2.new(0.02, 0, 0.74, 0)
+FarmBtn.Text = "▶ ФАРМ"
+FarmBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+FarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FarmBtn.Font = Enum.Font.GothamBold
+FarmBtn.TextSize = 12
+Instance.new("UICorner", FarmBtn).CornerRadius = UDim.new(0, 8)
+
+local SellBtn = Instance.new("TextButton")
+SellBtn.Parent = MainFrame
+SellBtn.Size = UDim2.new(0.23, -5, 0, 40)
+SellBtn.Position = UDim2.new(0.27, 0, 0.74, 0)
+SellBtn.Text = "🔴 ПРОД"
+SellBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+SellBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SellBtn.Font = Enum.Font.GothamBold
+SellBtn.TextSize = 12
+Instance.new("UICorner", SellBtn).CornerRadius = UDim.new(0, 8)
+
+local BattleToggleBtn = Instance.new("TextButton")
+BattleToggleBtn.Parent = MainFrame
+BattleToggleBtn.Size = UDim2.new(0.23, -5, 0, 40)
+BattleToggleBtn.Position = UDim2.new(0.52, 0, 0.74, 0)
+BattleToggleBtn.Text = "⚔️ БАТЛ"
+BattleToggleBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
+BattleToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BattleToggleBtn.Font = Enum.Font.GothamBold
+BattleToggleBtn.TextSize = 12
+Instance.new("UICorner", BattleToggleBtn).CornerRadius = UDim.new(0, 8)
+
+local InfoBtn = Instance.new("TextButton")
+InfoBtn.Parent = MainFrame
+InfoBtn.Size = UDim2.new(0.23, -5, 0, 35)
+InfoBtn.Position = UDim2.new(0.02, 0, 0.83, 0)
+InfoBtn.Text = "ℹ ИНФО"
+InfoBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+InfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoBtn.Font = Enum.Font.GothamBold
+InfoBtn.TextSize = 11
+Instance.new("UICorner", InfoBtn).CornerRadius = UDim.new(0, 8)
+
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Parent = MainFrame
+SettingsBtn.Size = UDim2.new(0.48, -5, 0, 35)
+SettingsBtn.Position = UDim2.new(0.27, 0, 0.83, 0)
+SettingsBtn.Text = "⚙ НАСТРОЙКИ"
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+SettingsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SettingsBtn.Font = Enum.Font.GothamBold
+SettingsBtn.TextSize = 11
+Instance.new("UICorner", SettingsBtn).CornerRadius = UDim.new(0, 8)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.Size = UDim2.new(0.94, 0, 0, 16)
+StatusLabel.Position = UDim2.new(0.03, 0, 0.92, 0)
+StatusLabel.Text = "⚡ ГОТОВ"
+StatusLabel.TextColor3 = Color3.fromRGB(150, 255, 100)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextSize = 9
+
+-- ========== ЗАПОЛНЕНИЕ СПИСКА КЕЙСОВ ==========
+local function RefreshCasesList()
+    for _, child in pairs(CasesPanel:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    for _, data in pairs(CasesDatabase) do
+        local isSelected = false
+        for _, s in pairs(SelectedCases) do if s == data.Name then isSelected = true break end end
+        
+        local btn = Instance.new("TextButton")
+        btn.Parent = CasesPanel
+        btn.Size = UDim2.new(1, -10, 0, 28)
+        btn.BackgroundColor3 = isSelected and Color3.fromRGB(100, 200, 50) or Color3.fromRGB(35, 40, 25)
+        btn.Text = "  " .. data.Name
+        btn.TextColor3 = isSelected and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 10
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+        
+        local price = Instance.new("TextLabel")
+        price.Parent = btn
+        price.Size = UDim2.new(0, 80, 1, 0)
+        price.Position = UDim2.new(1, -85, 0, 0)
+        price.Text = formatPrice(data.Price, OpenAmount)
+        price.TextColor3 = isSelected and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(150, 255, 100)
+        price.BackgroundTransparency = 1
+        price.Font = Enum.Font.GothamBold
+        price.TextSize = 9
+        price.TextXAlignment = Enum.TextXAlignment.Right
+        
+        btn.MouseButton1Click:Connect(function()
+            local found = false
+            for i, s in pairs(SelectedCases) do
+                if s == data.Name then table.remove(SelectedCases, i); found = true; break end
+            end
+            if not found then table.insert(SelectedCases, data.Name) end
+            StatusLabel.Text = "📦 Выбрано: " .. #SelectedCases .. " кейсов"
+            RefreshCasesList()
+        end)
+    end
+    CasesPanel.CanvasSize = UDim2.new(0, 0, 0, #CasesDatabase * 32)
+end
+
+-- ========== ЗАПОЛНЕНИЕ СПИСКА БАТЛОВ ==========
+local BattleCasesList = {}
+for _, data in pairs(CasesDatabase) do table.insert(BattleCasesList, data.Name) end
+
+local function RefreshBattlesList()
+    for _, child in pairs(BattlesPanel:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    -- Настройка количества кейсов
+    local amountFrame = Instance.new("Frame")
+    amountFrame.Parent = BattlesPanel
+    amountFrame.Size = UDim2.new(1, -10, 0, 45)
+    amountFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 25)
+    amountFrame.BackgroundTransparency = 0.5
+    Instance.new("UICorner", amountFrame).CornerRadius = UDim.new(0, 6)
+    
+    local amountLabel = Instance.new("TextLabel")
+    amountLabel.Parent = amountFrame
+    amountLabel.Size = UDim2.new(0.5, -10, 1, 0)
+    amountLabel.Position = UDim2.new(0, 5, 0, 0)
+    amountLabel.Text = "📦 Кейсов в битве: " .. BattleCaseAmount
+    amountLabel.TextColor3 = Color3.fromRGB(150, 255, 100)
+    amountLabel.BackgroundTransparency = 1
+    amountLabel.Font = Enum.Font.GothamBold
+    amountLabel.TextSize = 10
+    amountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local amountPlus = Instance.new("TextButton")
+    amountPlus.Parent = amountFrame
+    amountPlus.Size = UDim2.new(0, 30, 0, 30)
+    amountPlus.Position = UDim2.new(0.85, 0, 0.5, -15)
+    amountPlus.Text = "+"
+    amountPlus.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    amountPlus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    amountPlus.Font = Enum.Font.GothamBold
+    amountPlus.TextSize = 16
+    Instance.new("UICorner", amountPlus).CornerRadius = UDim.new(0, 6)
+    
+    local amountMinus = Instance.new("TextButton")
+    amountMinus.Parent = amountFrame
+    amountMinus.Size = UDim2.new(0, 30, 0, 30)
+    amountMinus.Position = UDim2.new(0.75, -35, 0.5, -15)
+    amountMinus.Text = "-"
+    amountMinus.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    amountMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    amountMinus.Font = Enum.Font.GothamBold
+    amountMinus.TextSize = 16
+    Instance.new("UICorner", amountMinus).CornerRadius = UDim.new(0, 6)
+    
+    amountPlus.MouseButton1Click:Connect(function()
+        if BattleCaseAmount < 10 then BattleCaseAmount = BattleCaseAmount + 1 end
+        amountLabel.Text = "📦 Кейсов в битве: " .. BattleCaseAmount
+    end)
+    
+    amountMinus.MouseButton1Click:Connect(function()
+        if BattleCaseAmount > 1 then BattleCaseAmount = BattleCaseAmount - 1 end
+        amountLabel.Text = "📦 Кейсов в битве: " .. BattleCaseAmount
+    end)
+    
+    -- Задержка между битвами
+    local delayFrame = Instance.new("Frame")
+    delayFrame.Parent = BattlesPanel
+    delayFrame.Size = UDim2.new(1, -10, 0, 45)
+    delayFrame.BackgroundColor3 = Color3.fromRGB(35, 40, 25)
+    delayFrame.BackgroundTransparency = 0.5
+    Instance.new("UICorner", delayFrame).CornerRadius = UDim.new(0, 6)
+    
+    local delayLabel = Instance.new("TextLabel")
+    delayLabel.Parent = delayFrame
+    delayLabel.Size = UDim2.new(0.5, -10, 1, 0)
+    delayLabel.Position = UDim2.new(0, 5, 0, 0)
+    delayLabel.Text = "⏱ Задержка: " .. BattleDelay .. " сек"
+    delayLabel.TextColor3 = Color3.fromRGB(150, 255, 100)
+    delayLabel.BackgroundTransparency = 1
+    delayLabel.Font = Enum.Font.GothamBold
+    delayLabel.TextSize = 10
+    delayLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local delayBox = Instance.new("TextBox")
+    delayBox.Parent = delayFrame
+    delayBox.Size = UDim2.new(0, 60, 0, 30)
+    delayBox.Position = UDim2.new(0.75, 0, 0.5, -15)
+    delayBox.Text = tostring(BattleDelay)
+    delayBox.BackgroundColor3 = Color3.fromRGB(30, 35, 30)
+    delayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    delayBox.Font = Enum.Font.GothamBold
+    delayBox.TextSize = 12
+    Instance.new("UICorner", delayBox).CornerRadius = UDim.new(0, 6)
+    
+    delayBox.FocusLost:Connect(function()
+        local num = tonumber(delayBox.Text)
+        if num and num > 0 then BattleDelay = num end
+        delayLabel.Text = "⏱ Задержка: " .. BattleDelay .. " сек"
+        delayBox.Text = tostring(BattleDelay)
+    end)
+    
+    -- Список кейсов для батла
+    for _, caseName in pairs(BattleCasesList) do
+        local isSelected = (BattleSelectedCase == caseName)
+        local btn = Instance.new("TextButton")
+        btn.Parent = BattlesPanel
+        btn.Size = UDim2.new(1, -10, 0, 28)
+        btn.BackgroundColor3 = isSelected and Color3.fromRGB(100, 200, 50) or Color3.fromRGB(35, 40, 25)
+        btn.Text = "  " .. caseName
+        btn.TextColor3 = isSelected and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 10
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+        
+        btn.MouseButton1Click:Connect(function()
+            BattleSelectedCase = caseName
+            RefreshBattlesList()
+            StatusLabel.Text = "⚔️ Выбран кейс: " .. caseName
+        end)
+    end
+    
+    local totalHeight = 45 + 45 + (#BattleCasesList * 32)
+    BattlesPanel.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+end
+
+-- ========== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
+CasesTab.MouseButton1Click:Connect(function()
+    CasesPanel.Visible = true
+    BattlesPanel.Visible = false
+    CasesTab.BackgroundColor3 = Color3.fromRGB(30, 40, 30)
+    CasesTab.TextColor3 = Color3.fromRGB(0, 255, 100)
+    BattlesTab.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    BattlesTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+end)
+
+BattlesTab.MouseButton1Click:Connect(function()
+    CasesPanel.Visible = false
+    BattlesPanel.Visible = true
+    BattlesTab.BackgroundColor3 = Color3.fromRGB(30, 40, 30)
+    BattlesTab.TextColor3 = Color3.fromRGB(0, 255, 100)
+    CasesTab.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    CasesTab.TextColor3 = Color3.fromRGB(200, 200, 200)
+    RefreshBattlesList()
+end)
+
+-- ========== КНОПКИ ==========
+FarmBtn.MouseButton1Click:Connect(function()
+    if #SelectedCases == 0 then
+        StatusLabel.Text = "❌ ВЫБЕРИТЕ КЕЙСЫ"
+        return
+    end
+    Farming = not Farming
+    if Farming then
+        FarmBtn.Text = "⏹ СТОП"
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 50)
+        StatusLabel.Text = "📦 ФАРМ АКТИВЕН"
+        task.spawn(FarmLoop)
+    else
+        FarmBtn.Text = "▶ ФАРМ"
+        FarmBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        StatusLabel.Text = "⚡ СТОП"
+    end
+end)
+
+SellBtn.MouseButton1Click:Connect(function()
+    AutoSellEnabled = not AutoSellEnabled
+    if AutoSellEnabled then
+        SellBtn.Text = "🟢 ПРОД"
+        SellBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+        StatusLabel.Text = "💰 АВТО-ПРОДАЖА ВКЛ"
+    else
+        SellBtn.Text = "🔴 ПРОД"
+        SellBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+        StatusLabel.Text = "💰 АВТО-ПРОДАЖА ВЫКЛ"
+    end
+end)
+
+BattleToggleBtn.MouseButton1Click:Connect(function()
+    AutoBattle = not AutoBattle
+    if AutoBattle then
+        BattleToggleBtn.Text = "⏹ БАТЛ"
+        BattleToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 50)
+        StatusLabel.Text = "⚔️ БАТЛ АКТИВЕН"
+        task.spawn(AutoBattleLoop)
+    else
+        BattleToggleBtn.Text = "⚔️ БАТЛ"
+        BattleToggleBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
+        StatusLabel.Text = "⚡ СТОП"
+    end
+end)
+
+InfoBtn.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "ℹ ДРОЧИЛЬНЯ ROBINA | АВТОР: TROTULOV39"
+    task.wait(2)
+    StatusLabel.Text = AutoBattle and "⚔️ БАТЛ АКТИВЕН" or (Farming and "📦 ФАРМ АКТИВЕН" or "⚡ ГОТОВ")
+end)
+
+SettingsBtn.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "⚙ НАСТРОЙКИ: Задержка " .. FarmDelay .. "с | Кейсов " .. OpenAmount
+end)
+
+-- ========== ЗАПУСК ==========
+RefreshCasesList()
+RefreshBattlesList()
+print("✅ ДРОЧИЛЬНЯ ROBINA - ПОЛНАЯ ВЕРСИЯ ЗАПУЩЕНА!")
+print("📦 Вкладка КЕЙСЫ - выбирай кейсы и жми ФАРМ")
+print("⚔️ Вкладка БАТЛЫ - выбирай кейс и жми БАТЛ")
