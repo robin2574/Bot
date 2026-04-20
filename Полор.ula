@@ -1,0 +1,30 @@
+local player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0, 320, 0, 60)
+label.Position = UDim2.new(0, 10, 0, 10)
+label.TextScaled = true
+label.BackgroundTransparency = 0.3
+label.Parent = screenGui
+
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local pos = input.Position
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        
+        local percentX = pos.X / screenSize.X
+        local percentY = pos.Y / screenSize.Y
+        
+        label.Text = string.format(
+            "PX: %d  PY: %d\n%%X: %.3f  %%Y: %.3f",
+            pos.X, pos.Y, percentX, percentY
+        )
+        
+        print("Pixel:", pos.X, pos.Y)
+        print("Percent:", percentX, percentY)
+    end
+end)
