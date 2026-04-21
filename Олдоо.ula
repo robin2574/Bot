@@ -1,0 +1,25 @@
+-- ========== CASE FARM ROBINA ==========
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+
+-- ========== НАСТРОЙКИ ==========
+local OpenAmount = 10  -- Кейсов за раз по умолчанию
+local AutoSell = false
+local Farming = false
+local FarmDelay = 0.01
+
+-- ID создателя
+local CREATOR_ID = 9988144824
+local CREATOR_NAME = "TROTULOV39"
+
+-- ========== ЦЕНЫ НА КЕЙСЫ (за 1 шт) ==========
+local CasePrices = {
+    ["Trash"] = 0,
+    ["Daily"] = 0,
+    ["Beggar"] = 220,
+    ["Plodder"] = 444,
+    ["Office Clerk"] = 
