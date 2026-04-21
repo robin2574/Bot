@@ -1,0 +1,423 @@
+-- ========== TON BATTLE - FULL MOD MENU (PHONE) ==========
+local player = game:GetService("Players").LocalPlayer
+local Events = game:GetService("ReplicatedStorage"):WaitForChild("Events")
+local AbuseVisual = Events:FindFirstChild("AbuseVisual")
+local SettingsEvent = Events:FindFirstChild("SettingsEvent")
+
+-- ========== ГОЛОВНЕ МЕНЮ ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MainMenu"
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 10)
+MainFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
+MainFrame.BorderSizePixel = 1
+MainFrame.Position = UDim2.new(0.05, 0, 0.1, 0)
+MainFrame.Size = UDim2.new(0, 160, 0, 200)
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 20)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "TON BATTLE"
+Title.TextColor3 = Color3.fromRGB(100, 255, 100)
+Title.TextSize = 10
+
+-- Кнопка MOD MENU
+local ModBtn = Instance.new("TextButton")
+ModBtn.Parent = MainFrame
+ModBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+ModBtn.BorderColor3 = Color3.fromRGB(255, 200, 50)
+ModBtn.BorderSizePixel = 1
+ModBtn.Position = UDim2.new(0.05, 0, 0.12, 0)
+ModBtn.Size = UDim2.new(0.9, 0, 0, 30)
+ModBtn.Font = Enum.Font.GothamBold
+ModBtn.Text = "MOD MENU"
+ModBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ModBtn.TextSize = 12
+Instance.new("UICorner", ModBtn).CornerRadius = UDim.new(0, 5)
+
+-- ========== MOD MENU ВІКНО ==========
+local ModFrame = Instance.new("Frame")
+ModFrame.Parent = ScreenGui
+ModFrame.BackgroundColor3 = Color3.fromRGB(15, 20, 10)
+ModFrame.BorderColor3 = Color3.fromRGB(255, 100, 100)
+ModFrame.BorderSizePixel = 2
+ModFrame.Position = UDim2.new(0.5, 0, 0.05, 0)
+ModFrame.Size = UDim2.new(0, 170, 0, 280)
+ModFrame.Active = true
+ModFrame.Draggable = true
+ModFrame.Visible = false
+Instance.new("UICorner", ModFrame).CornerRadius = UDim.new(0, 8)
+
+local ModTitle = Instance.new("TextLabel")
+ModTitle.Parent = ModFrame
+ModTitle.BackgroundTransparency = 1
+ModTitle.Position = UDim2.new(0, 0, 0, 0)
+ModTitle.Size = UDim2.new(1, 0, 0, 20)
+ModTitle.Font = Enum.Font.GothamBold
+ModTitle.Text = "MOD MENU"
+ModTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+ModTitle.TextSize = 10
+
+local CloseMod = Instance.new("TextButton")
+CloseMod.Parent = ModFrame
+CloseMod.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseMod.Position = UDim2.new(0.85, 0, 0.01, 0)
+CloseMod.Size = UDim2.new(0, 20, 0, 20)
+CloseMod.Font = Enum.Font.GothamBold
+CloseMod.Text = "X"
+CloseMod.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseMod.TextSize = 10
+Instance.new("UICorner", CloseMod).CornerRadius = UDim.new(0, 3)
+CloseMod.MouseButton1Click:Connect(function() ModFrame.Visible = false end)
+
+ModBtn.MouseButton1Click:Connect(function() ModFrame.Visible = true end)
+
+-- ========== ФУНКЦІЇ MOD MENU ==========
+local y = 0.1
+
+-- Stars
+local StarsLabel = Instance.new("TextLabel")
+StarsLabel.Parent = ModFrame
+StarsLabel.BackgroundTransparency = 1
+StarsLabel.Position = UDim2.new(0.05, 0, y, 0)
+StarsLabel.Size = UDim2.new(0.35, 0, 0, 20)
+StarsLabel.Font = Enum.Font.Gotham
+StarsLabel.Text = "Stars:"
+StarsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StarsLabel.TextSize = 8
+
+local StarsBox = Instance.new("TextBox")
+StarsBox.Parent = ModFrame
+StarsBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+StarsBox.Position = UDim2.new(0.42, 0, y, 0)
+StarsBox.Size = UDim2.new(0.35, 0, 0, 20)
+StarsBox.Font = Enum.Font.Gotham
+StarsBox.Text = "999999999"
+StarsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+StarsBox.TextSize = 7
+Instance.new("UICorner", StarsBox).CornerRadius = UDim.new(0, 3)
+
+local StarsBtn = Instance.new("TextButton")
+StarsBtn.Parent = ModFrame
+StarsBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+StarsBtn.Position = UDim2.new(0.79, 0, y, 0)
+StarsBtn.Size = UDim2.new(0.16, 0, 0, 20)
+StarsBtn.Font = Enum.Font.Gotham
+StarsBtn.Text = "SET"
+StarsBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+StarsBtn.TextSize = 7
+Instance.new("UICorner", StarsBtn).CornerRadius = UDim.new(0, 3)
+StarsBtn.MouseButton1Click:Connect(function()
+    local v = tonumber(StarsBox.Text) or 999999999
+    local stars = player:FindFirstChild("_StarsValue")
+    if stars then stars.Value = v end
+end)
+
+y = y + 0.09
+
+-- TON
+local TONLabel = Instance.new("TextLabel")
+TONLabel.Parent = ModFrame
+TONLabel.BackgroundTransparency = 1
+TONLabel.Position = UDim2.new(0.05, 0, y, 0)
+TONLabel.Size = UDim2.new(0.35, 0, 0, 20)
+TONLabel.Font = Enum.Font.Gotham
+TONLabel.Text = "TON:"
+TONLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TONLabel.TextSize = 8
+
+local TONBox = Instance.new("TextBox")
+TONBox.Parent = ModFrame
+TONBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+TONBox.Position = UDim2.new(0.42, 0, y, 0)
+TONBox.Size = UDim2.new(0.35, 0, 0, 20)
+TONBox.Font = Enum.Font.Gotham
+TONBox.Text = "999999"
+TONBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TONBox.TextSize = 7
+Instance.new("UICorner", TONBox).CornerRadius = UDim.new(0, 3)
+
+local TONBtn = Instance.new("TextButton")
+TONBtn.Parent = ModFrame
+TONBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+TONBtn.Position = UDim2.new(0.79, 0, y, 0)
+TONBtn.Size = UDim2.new(0.16, 0, 0, 20)
+TONBtn.Font = Enum.Font.Gotham
+TONBtn.Text = "SET"
+TONBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+TONBtn.TextSize = 7
+Instance.new("UICorner", TONBtn).CornerRadius = UDim.new(0, 3)
+TONBtn.MouseButton1Click:Connect(function()
+    local v = tonumber(TONBox.Text) or 999999
+    local ton = player:FindFirstChild("_TONValue")
+    if ton then ton.Value = v end
+end)
+
+y = y + 0.09
+
+-- Gems
+local GemsLabel = Instance.new("TextLabel")
+GemsLabel.Parent = ModFrame
+GemsLabel.BackgroundTransparency = 1
+GemsLabel.Position = UDim2.new(0.05, 0, y, 0)
+GemsLabel.Size = UDim2.new(0.35, 0, 0, 20)
+GemsLabel.Font = Enum.Font.Gotham
+GemsLabel.Text = "Gems:"
+GemsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+GemsLabel.TextSize = 8
+
+local GemsBox = Instance.new("TextBox")
+GemsBox.Parent = ModFrame
+GemsBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+GemsBox.Position = UDim2.new(0.42, 0, y, 0)
+GemsBox.Size = UDim2.new(0.35, 0, 0, 20)
+GemsBox.Font = Enum.Font.Gotham
+GemsBox.Text = "999999"
+GemsBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+GemsBox.TextSize = 7
+Instance.new("UICorner", GemsBox).CornerRadius = UDim.new(0, 3)
+
+local GemsBtn = Instance.new("TextButton")
+GemsBtn.Parent = ModFrame
+GemsBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+GemsBtn.Position = UDim2.new(0.79, 0, y, 0)
+GemsBtn.Size = UDim2.new(0.16, 0, 0, 20)
+GemsBtn.Font = Enum.Font.Gotham
+GemsBtn.Text = "SET"
+GemsBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+GemsBtn.TextSize = 7
+Instance.new("UICorner", GemsBtn).CornerRadius = UDim.new(0, 3)
+GemsBtn.MouseButton1Click:Connect(function()
+    local v = tonumber(GemsBox.Text) or 999999
+    local gems = player:FindFirstChild("_GemsValue")
+    if gems then gems.Value = v end
+end)
+
+y = y + 0.11
+
+-- Розділювач
+local Sep1 = Instance.new("Frame")
+Sep1.Parent = ModFrame
+Sep1.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+Sep1.Position = UDim2.new(0.05, 0, y, 0)
+Sep1.Size = UDim2.new(0.9, 0, 0, 1)
+y = y + 0.03
+
+-- Кнопка LUCK
+local LuckBtn = Instance.new("TextButton")
+LuckBtn.Parent = ModFrame
+LuckBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+LuckBtn.Position = UDim2.new(0.05, 0, y, 0)
+LuckBtn.Size = UDim2.new(0.43, 0, 0, 25)
+LuckBtn.Font = Enum.Font.GothamBold
+LuckBtn.Text = "LUCK x6"
+LuckBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+LuckBtn.TextSize = 9
+Instance.new("UICorner", LuckBtn).CornerRadius = UDim.new(0, 4)
+LuckBtn.MouseButton1Click:Connect(function()
+    for _, e in ipairs({AbuseVisual, SettingsEvent}) do
+        if e then
+            e:FireServer("Lucky", 6)
+            e:FireServer("Lucky", "x6")
+            e:FireServer("x6")
+        end
+    end
+end)
+
+-- Кнопка BLESS
+local BlessBtn = Instance.new("TextButton")
+BlessBtn.Parent = ModFrame
+BlessBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 255)
+BlessBtn.Position = UDim2.new(0.52, 0, y, 0)
+BlessBtn.Size = UDim2.new(0.43, 0, 0, 25)
+BlessBtn.Font = Enum.Font.GothamBold
+BlessBtn.Text = "BLESS"
+BlessBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BlessBtn.TextSize = 9
+Instance.new("UICorner", BlessBtn).CornerRadius = UDim.new(0, 4)
+BlessBtn.MouseButton1Click:Connect(function()
+    for _, e in ipairs({AbuseVisual, SettingsEvent}) do
+        if e then
+            e:FireServer("Server", "Blessing")
+            e:FireServer("ServerBlessing")
+            e:FireServer("Blessing", "All")
+        end
+    end
+end)
+
+y = y + 0.11
+
+-- BP Reset (9)
+local BPResetBtn = Instance.new("TextButton")
+BPResetBtn.Parent = ModFrame
+BPResetBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+BPResetBtn.Position = UDim2.new(0.05, 0, y, 0)
+BPResetBtn.Size = UDim2.new(0.9, 0, 0, 25)
+BPResetBtn.Font = Enum.Font.Gotham
+BPResetBtn.Text = "Reset BP Claims"
+BPResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+BPResetBtn.TextSize = 8
+Instance.new("UICorner", BPResetBtn).CornerRadius = UDim.new(0, 4)
+BPResetBtn.MouseButton1Click:Connect(function()
+    local bp = player:FindFirstChild("_BPClaimed")
+    if bp then for _, v in ipairs(bp:GetChildren()) do if v:IsA("BoolValue") then v.Value = false end end end
+end)
+
+y = y + 0.09
+
+-- BP Level (10)
+local BPLevelBox = Instance.new("TextBox")
+BPLevelBox.Parent = ModFrame
+BPLevelBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+BPLevelBox.Position = UDim2.new(0.05, 0, y, 0)
+BPLevelBox.Size = UDim2.new(0.5, 0, 0, 20)
+BPLevelBox.Font = Enum.Font.Gotham
+BPLevelBox.PlaceholderText = "BP Level"
+BPLevelBox.Text = "100"
+BPLevelBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+BPLevelBox.TextSize = 7
+Instance.new("UICorner", BPLevelBox).CornerRadius = UDim.new(0, 3)
+
+local BPLevelBtn = Instance.new("TextButton")
+BPLevelBtn.Parent = ModFrame
+BPLevelBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+BPLevelBtn.Position = UDim2.new(0.58, 0, y, 0)
+BPLevelBtn.Size = UDim2.new(0.37, 0, 0, 20)
+BPLevelBtn.Font = Enum.Font.Gotham
+BPLevelBtn.Text = "SET"
+BPLevelBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+BPLevelBtn.TextSize = 7
+Instance.new("UICorner", BPLevelBtn).CornerRadius = UDim.new(0, 3)
+BPLevelBtn.MouseButton1Click:Connect(function()
+    local v = tonumber(BPLevelBox.Text) or 100
+    local bp = player:FindFirstChild("_BPLevel")
+    if bp then bp.Value = v end
+end)
+
+y = y + 0.09
+
+-- Best Drop (11)
+local BestDropBox = Instance.new("TextBox")
+BestDropBox.Parent = ModFrame
+BestDropBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+BestDropBox.Position = UDim2.new(0.05, 0, y, 0)
+BestDropBox.Size = UDim2.new(0.5, 0, 0, 20)
+BestDropBox.Font = Enum.Font.Gotham
+BestDropBox.PlaceholderText = "Best Drop"
+BestDropBox.Text = "Rare Bird (Black Hawk)"
+BestDropBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+BestDropBox.TextSize = 6
+Instance.new("UICorner", BestDropBox).CornerRadius = UDim.new(0, 3)
+
+local BestDropBtn = Instance.new("TextButton")
+BestDropBtn.Parent = ModFrame
+BestDropBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+BestDropBtn.Position = UDim2.new(0.58, 0, y, 0)
+BestDropBtn.Size = UDim2.new(0.37, 0, 0, 20)
+BestDropBtn.Font = Enum.Font.Gotham
+BestDropBtn.Text = "SET"
+BestDropBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+BestDropBtn.TextSize = 7
+Instance.new("UICorner", BestDropBtn).CornerRadius = UDim.new(0, 3)
+BestDropBtn.MouseButton1Click:Connect(function()
+    local v = BestDropBox.Text
+    local bd = player:FindFirstChild("_BestDrop")
+    if not bd then bd = Instance.new("StringValue", player); bd.Name = "_BestDrop" end
+    bd.Value = v
+end)
+
+y = y + 0.09
+
+-- Index (12)
+local IndexName = Instance.new("TextBox")
+IndexName.Parent = ModFrame
+IndexName.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+IndexName.Position = UDim2.new(0.05, 0, y, 0)
+IndexName.Size = UDim2.new(0.55, 0, 0, 20)
+IndexName.Font = Enum.Font.Gotham
+IndexName.PlaceholderText = "NFT Name"
+IndexName.Text = ""
+IndexName.TextColor3 = Color3.fromRGB(255, 255, 255)
+IndexName.TextSize = 6
+Instance.new("UICorner", IndexName).CornerRadius = UDim.new(0, 3)
+
+local IndexCount = Instance.new("TextBox")
+IndexCount.Parent = ModFrame
+IndexCount.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+IndexCount.Position = UDim2.new(0.05, 0, y + 0.07, 0)
+IndexCount.Size = UDim2.new(0.3, 0, 0, 20)
+IndexCount.Font = Enum.Font.Gotham
+IndexCount.PlaceholderText = "Count"
+IndexCount.Text = ""
+IndexCount.TextColor3 = Color3.fromRGB(255, 255, 255)
+IndexCount.TextSize = 6
+Instance.new("UICorner", IndexCount).CornerRadius = UDim.new(0, 3)
+
+local IndexBtn = Instance.new("TextButton")
+IndexBtn.Parent = ModFrame
+IndexBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+IndexBtn.Position = UDim2.new(0.4, 0, y + 0.07, 0)
+IndexBtn.Size = UDim2.new(0.55, 0, 0, 20)
+IndexBtn.Font = Enum.Font.Gotham
+IndexBtn.Text = "ADD INDEX"
+IndexBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+IndexBtn.TextSize = 7
+Instance.new("UICorner", IndexBtn).CornerRadius = UDim.new(0, 3)
+IndexBtn.MouseButton1Click:Connect(function()
+    local name = IndexName.Text
+    local count = IndexCount.Text
+    if name ~= "" and count ~= "" then
+        local idx = player:FindFirstChild("_Index") or Instance.new("Folder", player)
+        idx.Name = "_Index"
+        local item = idx:FindFirstChild(name) or Instance.new("StringValue", idx)
+        item.Name = name
+        item.Value = count
+    end
+end)
+
+y = y + 0.16
+
+-- Inventory (13)
+local InvBox = Instance.new("TextBox")
+InvBox.Parent = ModFrame
+InvBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+InvBox.Position = UDim2.new(0.05, 0, y, 0)
+InvBox.Size = UDim2.new(0.55, 0, 0, 20)
+InvBox.Font = Enum.Font.Gotham
+InvBox.PlaceholderText = "Item Name"
+InvBox.Text = ""
+InvBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InvBox.TextSize = 6
+Instance.new("UICorner", InvBox).CornerRadius = UDim.new(0, 3)
+
+local InvBtn = Instance.new("TextButton")
+InvBtn.Parent = ModFrame
+InvBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+InvBtn.Position = UDim2.new(0.63, 0, y, 0)
+InvBtn.Size = UDim2.new(0.32, 0, 0, 20)
+InvBtn.Font = Enum.Font.Gotham
+InvBtn.Text = "ADD INV"
+InvBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+InvBtn.TextSize = 7
+Instance.new("UICorner", InvBtn).CornerRadius = UDim.new(0, 3)
+InvBtn.MouseButton1Click:Connect(function()
+    local name = InvBox.Text
+    if name ~= "" then
+        local inv = player:FindFirstChild("_Inventory") or Instance.new("Folder", player)
+        inv.Name = "_Inventory"
+        local item = Instance.new("StringValue", inv)
+        item.Name = name
+        item.Value = name
+    end
+end)
+
+print("MOD MENU LOADED!")
