@@ -1,0 +1,280 @@
+-- ========== BATTLE TEST SCRIPT ==========
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Events = ReplicatedStorage:WaitForChild("Events")
+
+-- Події для батлів
+local Battles = Events:WaitForChild("Battles")
+local BattleVisual = Events:WaitForChild("BattleVisual")
+
+-- ========== GUI ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BattleTestGUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 10)
+MainFrame.BackgroundTransparency = 0.05
+MainFrame.BorderColor3 = Color3.fromRGB(150, 255, 100)
+MainFrame.BorderSizePixel = 1
+MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 280)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 5)
+MainCorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 20)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "BATTLE TEST"
+Title.TextColor3 = Color3.fromRGB(150, 255, 100)
+Title.TextSize = 10
+
+-- Випадаючий список кейсів
+local CaseDropdown = Instance.new("TextLabel")
+CaseDropdown.Parent = MainFrame
+CaseDropdown.BackgroundTransparency = 1
+CaseDropdown.Position = UDim2.new(0.05, 0, 0.1, 0)
+CaseDropdown.Size = UDim2.new(0.9, 0, 0, 15)
+CaseDropdown.Font = Enum.Font.Gotham
+CaseDropdown.Text = "Case: Beggar"
+CaseDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+CaseDropdown.TextSize = 8
+
+local CaseBox = Instance.new("TextBox")
+CaseBox.Parent = MainFrame
+CaseBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+CaseBox.BorderColor3 = Color3.fromRGB(150, 255, 100)
+CaseBox.BorderSizePixel = 1
+CaseBox.Position = UDim2.new(0.05, 0, 0.17, 0)
+CaseBox.Size = UDim2.new(0.9, 0, 0, 20)
+CaseBox.Font = Enum.Font.Gotham
+CaseBox.PlaceholderText = "Case name"
+CaseBox.Text = "Beggar"
+CaseBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+CaseBox.TextSize = 8
+local CaseCorner = Instance.new("UICorner")
+CaseCorner.CornerRadius = UDim.new(0, 3)
+CaseCorner.Parent = CaseBox
+
+-- Кількість кейсів
+local AmountLabel = Instance.new("TextLabel")
+AmountLabel.Parent = MainFrame
+AmountLabel.BackgroundTransparency = 1
+AmountLabel.Position = UDim2.new(0.05, 0, 0.27, 0)
+AmountLabel.Size = UDim2.new(0.9, 0, 0, 15)
+AmountLabel.Font = Enum.Font.Gotham
+AmountLabel.Text = "Amount: 10"
+AmountLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+AmountLabel.TextSize = 8
+
+local AmountBox = Instance.new("TextBox")
+AmountBox.Parent = MainFrame
+AmountBox.BackgroundColor3 = Color3.fromRGB(30, 35, 20)
+AmountBox.BorderColor3 = Color3.fromRGB(150, 255, 100)
+AmountBox.BorderSizePixel = 1
+AmountBox.Position = UDim2.new(0.05, 0, 0.34, 0)
+AmountBox.Size = UDim2.new(0.9, 0, 0, 20)
+AmountBox.Font = Enum.Font.Gotham
+AmountBox.Text = "10"
+AmountBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+AmountBox.TextSize = 8
+local AmountCorner = Instance.new("UICorner")
+AmountCorner.CornerRadius = UDim.new(0, 3)
+AmountCorner.Parent = AmountBox
+
+-- Кнопка створити батл
+local CreateBtn = Instance.new("TextButton")
+CreateBtn.Parent = MainFrame
+CreateBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 50)
+CreateBtn.BorderColor3 = Color3.fromRGB(150, 255, 100)
+CreateBtn.BorderSizePixel = 1
+CreateBtn.Position = UDim2.new(0.05, 0, 0.45, 0)
+CreateBtn.Size = UDim2.new(0.9, 0, 0, 25)
+CreateBtn.Font = Enum.Font.GothamBold
+CreateBtn.Text = "CREATE BATTLE"
+CreateBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+CreateBtn.TextSize = 9
+local CreateCorner = Instance.new("UICorner")
+CreateCorner.CornerRadius = UDim.new(0, 3)
+CreateCorner.Parent = CreateBtn
+
+-- Кнопка грати з ботом
+local BotBtn = Instance.new("TextButton")
+BotBtn.Parent = MainFrame
+BotBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 30)
+BotBtn.BorderColor3 = Color3.fromRGB(150, 255, 100)
+BotBtn.BorderSizePixel = 1
+BotBtn.Position = UDim2.new(0.05, 0, 0.57, 0)
+BotBtn.Size = UDim2.new(0.9, 0, 0, 25)
+BotBtn.Font = Enum.Font.GothamBold
+BotBtn.Text = "PLAY WITH BOT"
+BotBtn.TextColor3 = Color3.fromRGB(150, 255, 100)
+BotBtn.TextSize = 9
+local BotCorner = Instance.new("UICorner")
+BotCorner.CornerRadius = UDim.new(0, 3)
+BotCorner.Parent = BotBtn
+
+-- Кнопка прийняти батл (якщо потрібно)
+local AcceptBtn = Instance.new("TextButton")
+AcceptBtn.Parent = MainFrame
+AcceptBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 30)
+AcceptBtn.BorderColor3 = Color3.fromRGB(150, 255, 100)
+AcceptBtn.BorderSizePixel = 1
+AcceptBtn.Position = UDim2.new(0.05, 0, 0.69, 0)
+AcceptBtn.Size = UDim2.new(0.9, 0, 0, 25)
+AcceptBtn.Font = Enum.Font.GothamBold
+AcceptBtn.Text = "ACCEPT BATTLE"
+AcceptBtn.TextColor3 = Color3.fromRGB(150, 255, 100)
+AcceptBtn.TextSize = 9
+local AcceptCorner = Instance.new("UICorner")
+AcceptCorner.CornerRadius = UDim.new(0, 3)
+AcceptCorner.Parent = AcceptBtn
+
+-- Статус
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0.05, 0, 0.83, 0)
+StatusLabel.Size = UDim2.new(0.9, 0, 0, 30)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "Ready"
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatusLabel.TextSize = 7
+StatusLabel.TextWrapped = true
+
+-- ========== ФУНКЦІЇ ==========
+local function SetStatus(text, color)
+    StatusLabel.Text = text
+    StatusLabel.TextColor3 = color or Color3.fromRGB(150, 150, 150)
+end
+
+-- Тест 1: Просто викликати Battles без параметрів
+CreateBtn.MouseButton1Click:Connect(function()
+    local caseName = CaseBox.Text
+    local amount = tonumber(AmountBox.Text) or 10
+    
+    SetStatus("Creating battle: " .. caseName .. " x" .. amount, Color3.fromRGB(150, 255, 100))
+    
+    pcall(function()
+        -- Пробуємо різні варіанти виклику
+        local success, result = pcall(function()
+            return Battles:InvokeServer("Create", caseName, amount)
+        end)
+        
+        if success then
+            SetStatus("Create success! Result: " .. tostring(result), Color3.fromRGB(100, 255, 100))
+        else
+            SetStatus("Create failed: " .. tostring(result), Color3.fromRGB(255, 100, 100))
+        end
+    end)
+end)
+
+BotBtn.MouseButton1Click:Connect(function()
+    SetStatus("Playing with bot...", Color3.fromRGB(150, 255, 100))
+    
+    pcall(function()
+        local success, result = pcall(function()
+            return Battles:InvokeServer("PlayWithBot")
+        end)
+        
+        if success then
+            SetStatus("Bot battle started!", Color3.fromRGB(100, 255, 100))
+        else
+            -- Пробуємо інші варіанти назв
+            local variants = {"Bot", "PlayBot", "StartBot", "JoinBot"}
+            local worked = false
+            
+            for _, v in ipairs(variants) do
+                local s, r = pcall(function()
+                    return Battles:InvokeServer(v)
+                end)
+                if s then
+                    SetStatus("Bot battle with '" .. v .. "' worked!", Color3.fromRGB(100, 255, 100))
+                    worked = true
+                    break
+                end
+            end
+            
+            if not worked then
+                SetStatus("All bot variants failed", Color3.fromRGB(255, 100, 100))
+            end
+        end
+    end)
+end)
+
+AcceptBtn.MouseButton1Click:Connect(function()
+    SetStatus("Accepting battle...", Color3.fromRGB(150, 255, 100))
+    
+    pcall(function()
+        local success, result = pcall(function()
+            return Battles:InvokeServer("Accept")
+        end)
+        
+        if success then
+            SetStatus("Battle accepted!", Color3.fromRGB(100, 255, 100))
+        else
+            SetStatus("Accept failed", Color3.fromRGB(255, 100, 100))
+        end
+    end)
+end)
+
+-- Додаткова кнопка для перегляду всіх можливих команд
+local TestBtn = Instance.new("TextButton")
+TestBtn.Parent = MainFrame
+TestBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 40)
+TestBtn.BorderColor3 = Color3.fromRGB(150, 255, 100)
+TestBtn.BorderSizePixel = 1
+TestBtn.Position = UDim2.new(0.05, 0, 0.93, 0)
+TestBtn.Size = UDim2.new(0.9, 0, 0, 15)
+TestBtn.Font = Enum.Font.Gotham
+TestBtn.Text = "TEST ALL COMMANDS"
+TestBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TestBtn.TextSize = 6
+local TestCorner = Instance.new("UICorner")
+TestCorner.CornerRadius = UDim.new(0, 3)
+TestCorner.Parent = TestBtn
+
+TestBtn.MouseButton1Click:Connect(function()
+    local caseName = CaseBox.Text
+    local amount = tonumber(AmountBox.Text) or 10
+    
+    local commands = {
+        "Create", "create", "New", "new", "Start", "start",
+        "CreateBattle", "NewBattle", "StartBattle",
+        {"Create", caseName, amount},
+        {"CreateBattle", caseName, amount},
+        {caseName, amount}
+    }
+    
+    local results = {}
+    for _, cmd in ipairs(commands) do
+        local s, r = pcall(function()
+            if type(cmd) == "table" then
+                return Battles:InvokeServer(unpack(cmd))
+            else
+                return Battles:InvokeServer(cmd)
+            end
+        end)
+        if s then
+            table.insert(results, tostring(cmd) .. " -> OK")
+        end
+    end
+    
+    if #results > 0 then
+        SetStatus("Working: " .. table.concat(results, ", "), Color3.fromRGB(100, 255, 100))
+    else
+        SetStatus("No working commands found", Color3.fromRGB(255, 100, 100))
+    end
+end)
+
+print("BATTLE TEST GUI LOADED!")
+SetStatus("Ready - Test GUI loaded")
