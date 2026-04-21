@@ -1,0 +1,832 @@
+-- ========== BATTLE FARM ROBINA ==========
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local UserInputService = game:GetService("UserInputService")
+
+-- ========== НАСТРОЙКИ ==========
+local BattleAmount = 1      -- Количество битв подряд
+local SelectedCase = nil    -- Выбранный кейс для битвы
+local AutoClaim = true      -- Автоматически забирать награду
+local Farming = false
+local FarmDelay = 1
+
+-- ID создателя
+local CREATOR_ID = 9988144824
+local CREATOR_NAME = "TROTULOV39"
+
+-- ========== ДОСТУПНЫЕ КЕЙСЫ ДЛЯ БИТВ ==========
+local BattleCases = {
+    "Trash", "Daily", "Beggar", "Plodder", "Office Clerk", "Manager",
+    "Director", "Oligarch", "Gold", "Frozen Heart", "Dark", "Bubble Gum",
+    "Palm", "Burj", "Cats", "M5 F90", "Luxury", "Glitch", "G63", "Dream",
+    "Porsche 911", "URUS", "Bloody Night", "Marina", "Abyss Core",
+    "Cursed Demon", "Heavenfall", "Photon Core", "Divine", "Sunny Day",
+    "Radioactive"
+}
+
+-- Выбранные кейсы (до 10 штук)
+local SelectedCases = {}  -- Будет заполняться через UI
+
+-- ========== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ АВАТАРА ==========
+local function getAvatar(userId)
+    return "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=100&height=100&format=png"
+end
+
+-- ========== ГЛАВНОЕ МЕНЮ ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BattleFarmRobina"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+MainFrame.BackgroundTransparency = 0.05
+MainFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
+MainFrame.BorderSizePixel = 2
+MainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 350, 0, 550)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+-- ЗАГОЛОВОК
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "⚔️ BATTLE FARM ROBINA ⚔️"
+Title.TextColor3 = Color3.fromRGB(100, 150, 255)
+Title.TextSize = 16
+
+-- ИНФО О ВЫБРАННЫХ КЕЙСАХ
+local SelectedInfo = Instance.new("TextLabel")
+SelectedInfo.Parent = MainFrame
+SelectedInfo.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+SelectedInfo.BorderColor3 = Color3.fromRGB(100, 150, 255)
+SelectedInfo.BorderSizePixel = 1
+SelectedInfo.Position = UDim2.new(0.05, 0, 0.09, 0)
+SelectedInfo.Size = UDim2.new(0.9, 0, 0, 45)
+SelectedInfo.Font = Enum.Font.GothamBold
+SelectedInfo.Text = "📦 ВЫБРАНО КЕЙСОВ: 0/10"
+SelectedInfo.TextColor3 = Color3.fromRGB(100, 150, 255)
+SelectedInfo.TextSize = 11
+SelectedInfo.TextWrapped = true
+local SelCorner = Instance.new("UICorner")
+SelCorner.CornerRadius = UDim.new(0, 5)
+SelCorner.Parent = SelectedInfo
+
+-- СПИСОК КЕЙСОВ ДЛЯ ВЫБОРА
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Parent = MainFrame
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+ScrollFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
+ScrollFrame.BorderSizePixel = 1
+ScrollFrame.Position = UDim2.new(0.05, 0, 0.19, 0)
+ScrollFrame.Size = UDim2.new(0.9, 0, 0, 200)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 4
+local ScrollCorner = Instance.new("UICorner")
+ScrollCorner.CornerRadius = UDim.new(0, 6)
+ScrollCorner.Parent = ScrollFrame
+
+local ScrollLayout = Instance.new("UIListLayout")
+ScrollLayout.Parent = ScrollFrame
+ScrollLayout.Padding = UDim.new(0, 3)
+
+-- КНОПКИ УПРАВЛЕНИЯ БИТВАМИ
+local BattleCountLabel = Instance.new("TextLabel")
+BattleCountLabel.Parent = MainFrame
+BattleCountLabel.BackgroundTransparency = 1
+BattleCountLabel.Position = UDim2.new(0.05, 0, 0.58, 0)
+BattleCountLabel.Size = UDim2.new(0.4, 0, 0, 25)
+BattleCountLabel.Font = Enum.Font.Gotham
+BattleCountLabel.Text = "⚔️ Битв подряд:"
+BattleCountLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+BattleCountLabel.TextSize = 11
+
+local BattleCountBox = Instance.new("TextBox")
+BattleCountBox.Parent = MainFrame
+BattleCountBox.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+BattleCountBox.BorderColor3 = Color3.fromRGB(100, 150, 255)
+BattleCountBox.BorderSizePixel = 1
+BattleCountBox.Position = UDim2.new(0.5, 0, 0.58, 0)
+BattleCountBox.Size = UDim2.new(0.2, 0, 0, 25)
+BattleCountBox.Font = Enum.Font.GothamBold
+BattleCountBox.Text = "1"
+BattleCountBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+BattleCountBox.TextSize = 12
+local BCCorner = Instance.new("UICorner")
+BCCorner.CornerRadius = UDim.new(0, 5)
+BCCorner.Parent = BattleCountBox
+
+-- КНОПКА АВТОЗАБОР
+local ClaimBtn = Instance.new("TextButton")
+ClaimBtn.Parent = MainFrame
+ClaimBtn.BackgroundColor3 = Color3.fromRGB(40, 35, 50)
+ClaimBtn.BorderColor3 = Color3.fromRGB(100, 150, 255)
+ClaimBtn.BorderSizePixel = 1
+ClaimBtn.Position = UDim2.new(0.05, 0, 0.66, 0)
+ClaimBtn.Size = UDim2.new(0.43, 0, 0, 35)
+ClaimBtn.Font = Enum.Font.GothamBold
+ClaimBtn.Text = "🔴 АВТОЗАБОР: ВЫКЛ"
+ClaimBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+ClaimBtn.TextSize = 10
+local ClaimCorner = Instance.new("UICorner")
+ClaimCorner.CornerRadius = UDim.new(0, 5)
+ClaimCorner.Parent = ClaimBtn
+
+-- КНОПКА СТАРТ/СТОП
+local StartBtn = Instance.new("TextButton")
+StartBtn.Parent = MainFrame
+StartBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+StartBtn.BorderColor3 = Color3.fromRGB(150, 200, 255)
+StartBtn.BorderSizePixel = 2
+StartBtn.Position = UDim2.new(0.52, 0, 0.66, 0)
+StartBtn.Size = UDim2.new(0.43, 0, 0, 35)
+StartBtn.Font = Enum.Font.GothamBold
+StartBtn.Text = "▶ ФАРМ БИТВ"
+StartBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+StartBtn.TextSize = 12
+local StartCorner = Instance.new("UICorner")
+StartCorner.CornerRadius = UDim.new(0, 5)
+StartCorner.Parent = StartBtn
+
+-- КНОПКА НАСТРОЕК
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Parent = MainFrame
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+SettingsBtn.BorderColor3 = Color3.fromRGB(100, 150, 255)
+SettingsBtn.BorderSizePixel = 1
+SettingsBtn.Position = UDim2.new(0.05, 0, 0.76, 0)
+SettingsBtn.Size = UDim2.new(0.43, 0, 0, 30)
+SettingsBtn.Font = Enum.Font.GothamBold
+SettingsBtn.Text = "⚙ НАСТРОЙКИ"
+SettingsBtn.TextColor3 = Color3.fromRGB(100, 150, 255)
+SettingsBtn.TextSize = 10
+local SetCorner = Instance.new("UICorner")
+SetCorner.CornerRadius = UDim.new(0, 5)
+SetCorner.Parent = SettingsBtn
+
+-- КНОПКА ИНФО
+local InfoBtn = Instance.new("TextButton")
+InfoBtn.Parent = MainFrame
+InfoBtn.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+InfoBtn.BorderColor3 = Color3.fromRGB(100, 150, 255)
+InfoBtn.BorderSizePixel = 1
+InfoBtn.Position = UDim2.new(0.52, 0, 0.76, 0)
+InfoBtn.Size = UDim2.new(0.43, 0, 0, 30)
+InfoBtn.Font = Enum.Font.GothamBold
+InfoBtn.Text = "ℹ ИНФО"
+InfoBtn.TextColor3 = Color3.fromRGB(100, 150, 255)
+InfoBtn.TextSize = 10
+local InfoCorner = Instance.new("UICorner")
+InfoCorner.CornerRadius = UDim.new(0, 5)
+InfoCorner.Parent = InfoBtn
+
+-- СТАТУС
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Parent = MainFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Position = UDim2.new(0.05, 0, 0.83, 0)
+StatusLabel.Size = UDim2.new(0.9, 0, 0, 15)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "⚡ ГОТОВ"
+StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+StatusLabel.TextSize = 9
+
+-- НИЗ МЕНЮ (НИК И АВАТАР)
+local BottomFrame = Instance.new("Frame")
+BottomFrame.Parent = MainFrame
+BottomFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+BottomFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
+BottomFrame.BorderSizePixel = 1
+BottomFrame.Position = UDim2.new(0.05, 0, 0.88, 0)
+BottomFrame.Size = UDim2.new(0.9, 0, 0, 40)
+local BottomCorner = Instance.new("UICorner")
+BottomCorner.CornerRadius = UDim.new(0, 5)
+BottomCorner.Parent = BottomFrame
+
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Parent = BottomFrame
+AvatarImage.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+AvatarImage.Position = UDim2.new(0.02, 0, 0.1, 0)
+AvatarImage.Size = UDim2.new(0, 30, 0, 30)
+AvatarImage.Image = getAvatar(LocalPlayer.UserId)
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(0, 15)
+AvatarCorner.Parent = AvatarImage
+
+local PlayerNameLabel = Instance.new("TextLabel")
+PlayerNameLabel.Parent = BottomFrame
+PlayerNameLabel.BackgroundTransparency = 1
+PlayerNameLabel.Position = UDim2.new(0.3, 0, 0.1, 0)
+PlayerNameLabel.Size = UDim2.new(0.68, 0, 0, 30)
+PlayerNameLabel.Font = Enum.Font.GothamBold
+PlayerNameLabel.Text = LocalPlayer.Name
+PlayerNameLabel.TextColor3 = Color3.fromRGB(100, 150, 255)
+PlayerNameLabel.TextSize = 10
+PlayerNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ========== МЕНЮ НАСТРОЕК ==========
+local SettingsFrame = Instance.new("Frame")
+SettingsFrame.Parent = ScreenGui
+SettingsFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+SettingsFrame.BackgroundTransparency = 0.05
+SettingsFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
+SettingsFrame.BorderSizePixel = 2
+SettingsFrame.Position = UDim2.new(0.4, 0, 0.35, 0)
+SettingsFrame.Size = UDim2.new(0, 280, 0, 160)
+SettingsFrame.Active = true
+SettingsFrame.Draggable = true
+SettingsFrame.Visible = false
+
+local SetCorner2 = Instance.new("UICorner")
+SetCorner2.CornerRadius = UDim.new(0, 10)
+SetCorner2.Parent = SettingsFrame
+
+local SetTitle = Instance.new("TextLabel")
+SetTitle.Parent = SettingsFrame
+SetTitle.BackgroundTransparency = 1
+SetTitle.Position = UDim2.new(0, 0, 0, 0)
+SetTitle.Size = UDim2.new(1, 0, 0, 30)
+SetTitle.Font = Enum.Font.GothamBold
+SetTitle.Text = "⚙ НАСТРОЙКИ БИТВ"
+SetTitle.TextColor3 = Color3.fromRGB(100, 150, 255)
+SetTitle.TextSize = 14
+
+local CloseSetBtn = Instance.new("TextButton")
+CloseSetBtn.Parent = SettingsFrame
+CloseSetBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseSetBtn.BackgroundTransparency = 0.2
+CloseSetBtn.BorderSizePixel = 0
+CloseSetBtn.Position = UDim2.new(0.85, 0, 0.02, 0)
+CloseSetBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseSetBtn.Font = Enum.Font.GothamBold
+CloseSetBtn.Text = "✕"
+CloseSetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseSetBtn.TextSize = 14
+local CloseSetCorner = Instance.new("UICorner")
+CloseSetCorner.CornerRadius = UDim.new(0, 5)
+CloseSetCorner.Parent = CloseSetBtn
+CloseSetBtn.MouseButton1Click:Connect(function() SettingsFrame.Visible = false end)
+
+-- ЗАДЕРЖКА МЕЖДУ БИТВАМИ
+local DelayLabel = Instance.new("TextLabel")
+DelayLabel.Parent = SettingsFrame
+DelayLabel.BackgroundTransparency = 1
+DelayLabel.Position = UDim2.new(0.05, 0, 0.15, 0)
+DelayLabel.Size = UDim2.new(0.6, 0, 0, 30)
+DelayLabel.Font = Enum.Font.Gotham
+DelayLabel.Text = "⏱ Задержка (сек):"
+DelayLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+DelayLabel.TextSize = 11
+
+local DelayBox = Instance.new("TextBox")
+DelayBox.Parent = SettingsFrame
+DelayBox.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+DelayBox.BorderColor3 = Color3.fromRGB(100, 150, 255)
+DelayBox.BorderSizePixel = 1
+DelayBox.Position = UDim2.new(0.65, 0, 0.15, 0)
+DelayBox.Size = UDim2.new(0.3, 0, 0, 30)
+DelayBox.Font = Enum.Font.GothamBold
+DelayBox.Text = "1"
+DelayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+DelayBox.TextSize = 12
+local DelayCorner = Instance.new("UICorner")
+DelayCorner.CornerRadius = UDim.new(0, 5)
+DelayCorner.Parent = DelayBox
+
+-- КНОПКА СОХРАНЕНИЯ
+local SaveSettingsBtn = Instance.new("TextButton")
+SaveSettingsBtn.Parent = SettingsFrame
+SaveSettingsBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+SaveSettingsBtn.BorderColor3 = Color3.fromRGB(150, 200, 255)
+SaveSettingsBtn.BorderSizePixel = 1
+SaveSettingsBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+SaveSettingsBtn.Size = UDim2.new(0.9, 0, 0, 40)
+SaveSettingsBtn.Font = Enum.Font.GothamBold
+SaveSettingsBtn.Text = "💾 СОХРАНИТЬ"
+SaveSettingsBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+SaveSettingsBtn.TextSize = 12
+local SaveSettingsCorner = Instance.new("UICorner")
+SaveSettingsCorner.CornerRadius = UDim.new(0, 6)
+SaveSettingsCorner.Parent = SaveSettingsBtn
+
+-- ========== МЕНЮ ИНФО ==========
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Parent = ScreenGui
+InfoFrame.BackgroundColor3 = Color3.fromRGB(20, 25, 45)
+InfoFrame.BackgroundTransparency = 0.05
+InfoFrame.BorderColor3 = Color3.fromRGB(100, 150, 255)
+InfoFrame.BorderSizePixel = 2
+InfoFrame.Position = UDim2.new(0.4, 0, 0.35, 0)
+InfoFrame.Size = UDim2.new(0, 300, 0, 350)
+InfoFrame.Active = true
+InfoFrame.Draggable = true
+InfoFrame.Visible = false
+
+local InfoCorner2 = Instance.new("UICorner")
+InfoCorner2.CornerRadius = UDim.new(0, 10)
+InfoCorner2.Parent = InfoFrame
+
+local InfoTitle = Instance.new("TextLabel")
+InfoTitle.Parent = InfoFrame
+InfoTitle.BackgroundTransparency = 1
+InfoTitle.Position = UDim2.new(0, 0, 0, 0)
+InfoTitle.Size = UDim2.new(1, 0, 0, 35)
+InfoTitle.Font = Enum.Font.GothamBold
+InfoTitle.Text = "ℹ ИНФОРМАЦИЯ"
+InfoTitle.TextColor3 = Color3.fromRGB(100, 150, 255)
+InfoTitle.TextSize = 16
+
+local CloseInfoBtn = Instance.new("TextButton")
+CloseInfoBtn.Parent = InfoFrame
+CloseInfoBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseInfoBtn.BackgroundTransparency = 0.2
+CloseInfoBtn.BorderSizePixel = 0
+CloseInfoBtn.Position = UDim2.new(0.85, 0, 0.02, 0)
+CloseInfoBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseInfoBtn.Font = Enum.Font.GothamBold
+CloseInfoBtn.Text = "✕"
+CloseInfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseInfoBtn.TextSize = 14
+local CloseInfoCorner = Instance.new("UICorner")
+CloseInfoCorner.CornerRadius = UDim.new(0, 5)
+CloseInfoCorner.Parent = CloseInfoBtn
+CloseInfoBtn.MouseButton1Click:Connect(function() InfoFrame.Visible = false end)
+
+-- Аватар создателя
+local CreatorAvatar = Instance.new("ImageLabel")
+CreatorAvatar.Parent = InfoFrame
+CreatorAvatar.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+CreatorAvatar.Position = UDim2.new(0.35, 0, 0.1, 0)
+CreatorAvatar.Size = UDim2.new(0, 80, 0, 80)
+CreatorAvatar.Image = getAvatar(CREATOR_ID)
+local CreatorAvatarCorner = Instance.new("UICorner")
+CreatorAvatarCorner.CornerRadius = UDim.new(0, 40)
+CreatorAvatarCorner.Parent = CreatorAvatar
+
+local CreatorNameLabel = Instance.new("TextLabel")
+CreatorNameLabel.Parent = InfoFrame
+CreatorNameLabel.BackgroundTransparency = 1
+CreatorNameLabel.Position = UDim2.new(0, 0, 0.3, 0)
+CreatorNameLabel.Size = UDim2.new(1, 0, 0, 30)
+CreatorNameLabel.Font = Enum.Font.GothamBold
+CreatorNameLabel.Text = "👑 " .. CREATOR_NAME
+CreatorNameLabel.TextColor3 = Color3.fromRGB(100, 150, 255)
+CreatorNameLabel.TextSize = 14
+
+local InfoSeparator = Instance.new("Frame")
+InfoSeparator.Parent = InfoFrame
+InfoSeparator.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+InfoSeparator.BorderSizePixel = 0
+InfoSeparator.Position = UDim2.new(0.05, 0, 0.38, 0)
+InfoSeparator.Size = UDim2.new(0.9, 0, 0, 2)
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Parent = InfoFrame
+InfoText.BackgroundTransparency = 1
+InfoText.Position = UDim2.new(0.05, 0, 0.43, 0)
+InfoText.Size = UDim2.new(0.9, 0, 0, 0.5)
+InfoText.Font = Enum.Font.Gotham
+InfoText.Text = "⚔️ BATTLE FARM ROBINA ⚔️\n\nСкрипт для автоматических битв\nВыбирайте до 10 кейсов для битв\nСкрипт сам создаёт битву,\nвыбирает кейс и забирает награду\n\n📌 Работает через Remote события\n📌 Названия событий: CreateBattle,\nSelectCase, Claim и т.д."
+InfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
+InfoText.TextSize = 10
+InfoText.TextWrapped = true
+InfoText.TextYAlignment = Enum.TextYAlignment.Top
+
+-- ========== ФУНКЦИИ ==========
+local function UpdateSelectedInfo()
+    local count = #SelectedCases
+    if count == 0 then
+        SelectedInfo.Text = "⚠ НЕ ВЫБРАНО НИ ОДНОГО КЕЙСА! (0/10)"
+        SelectedInfo.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        local names = {}
+        for i = 1, math.min(3, count) do
+            table.insert(names, SelectedCases[i])
+        end
+        local text = "📦 ВЫБРАНО: " .. table.concat(names, ", ")
+        if count > 3 then
+            text = text .. " +" .. (count - 3) .. " ещё"
+        end
+        SelectedInfo.Text = text .. " (" .. count .. "/10)"
+        SelectedInfo.TextColor3 = Color3.fromRGB(100, 150, 255)
+    end
+end
+
+local function RefreshCaseList()
+    for _, child in pairs(ScrollFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    for i, caseName in ipairs(BattleCases) do
+        local btn = Instance.new("TextButton")
+        btn.Parent = ScrollFrame
+        btn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+        btn.BorderColor3 = Color3.fromRGB(100, 150, 255)
+        btn.BorderSizePixel = 1
+        btn.Size = UDim2.new(1, 0, 0, 30)
+        btn.Font = Enum.Font.Gotham
+        btn.Text = caseName
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 10
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 4)
+        btnCorner.Parent = btn
+
+        -- Проверка, выбран ли кейс
+        local isSelected = false
+        for _, selected in ipairs(SelectedCases) do
+            if selected == caseName then
+                isSelected = true
+                break
+            end
+        end
+        
+        if isSelected then
+            btn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+            btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        end
+
+        btn.MouseButton1Click:Connect(function()
+            local found = false
+            local index = nil
+            for i, selected in ipairs(SelectedCases) do
+                if selected == caseName then
+                    found = true
+                    index = i
+                    break
+                end
+            end
+            
+            if found then
+                table.remove(SelectedCases, index)
+            else
+                if #SelectedCases < 10 then
+                    table.insert(SelectedCases, caseName)
+                else
+                    StatusLabel.Text = "⚠ МАКСИМУМ 10 КЕЙСОВ!"
+                    StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                    task.wait(1)
+                    StatusLabel.Text = "⚡ ГОТОВ"
+                    StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                    return
+                end
+            end
+            UpdateSelectedInfo()
+            RefreshCaseList()
+        end)
+    end
+
+    local count = #ScrollFrame:GetChildren() - 2
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, count * 34 + 10)
+end
+
+local function UpdateClaimUI()
+    if AutoClaim then
+        ClaimBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+        ClaimBtn.BorderColor3 = Color3.fromRGB(150, 200, 255)
+        ClaimBtn.Text = "🟢 АВТОЗАБОР: ВКЛ"
+        ClaimBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    else
+        ClaimBtn.BackgroundColor3 = Color3.fromRGB(40, 35, 50)
+        ClaimBtn.BorderColor3 = Color3.fromRGB(255, 100, 100)
+        ClaimBtn.Text = "🔴 АВТОЗАБОР: ВЫКЛ"
+        ClaimBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end
+
+ClaimBtn.MouseButton1Click:Connect(function()
+    AutoClaim = not AutoClaim
+    UpdateClaimUI()
+end)
+
+SettingsBtn.MouseButton1Click:Connect(function()
+    SettingsFrame.Visible = true
+    SettingsFrame.Position = MainFrame.Position
+end)
+
+InfoBtn.MouseButton1Click:Connect(function()
+    InfoFrame.Visible = true
+    InfoFrame.Position = MainFrame.Position
+end)
+
+SaveSettingsBtn.MouseButton1Click:Connect(function()
+    local num = tonumber(BattleCountBox.Text)
+    if num and num >= 1 and num <= 50 then
+        BattleAmount = math.floor(num)
+        BattleCountBox.Text = tostring(BattleAmount)
+    else
+        BattleAmount = 1
+        BattleCountBox.Text = "1"
+    end
+    
+    local num2 = tonumber(DelayBox.Text)
+    if num2 and num2 >= 0.5 then
+        FarmDelay = num2
+        DelayBox.Text = tostring(FarmDelay)
+    else
+        FarmDelay = 1
+        DelayBox.Text = "1"
+    end
+    
+    SettingsFrame.Visible = false
+end)
+
+BattleCountBox.FocusLost:Connect(function()
+    local num = tonumber(BattleCountBox.Text)
+    if num and num >= 1 and num <= 50 then
+        BattleAmount = math.floor(num)
+        BattleCountBox.Text = tostring(BattleAmount)
+    else
+        BattleAmount = 1
+        BattleCountBox.Text = "1"
+    end
+end)
+
+DelayBox.FocusLost:Connect(function()
+    local num = tonumber(DelayBox.Text)
+    if num and num >= 0.5 then
+        FarmDelay = num
+        DelayBox.Text = tostring(FarmDelay)
+    else
+        FarmDelay = 1
+        DelayBox.Text = "1"
+    end
+end)
+
+-- ========== ПОИСК СОБЫТИЙ ==========
+local function FindEvent(eventNames)
+    local Events = ReplicatedStorage:FindFirstChild("Events")
+    if not Events then
+        -- Поиск в других возможных местах
+        for _, container in pairs(ReplicatedStorage:GetChildren()) do
+            if container:IsA("Folder") or container:IsA("ModuleScript") then
+                Events = container
+                break
+            end
+        end
+    end
+    
+    for _, name in ipairs(eventNames) do
+        if Events then
+            local event = Events:FindFirstChild(name)
+            if event then
+                return event, name
+            end
+        end
+        -- Поиск в ReplicatedStorage напрямую
+        local event = ReplicatedStorage:FindFirstChild(name)
+        if event then
+            return event, name
+        end
+    end
+    return nil, nil
+end
+
+-- ========== ОСНОВНОЙ ЦИКЛ БИТВ ==========
+local function CreateBattle(caseName)
+    pcall(function()
+        -- Пробуем разные возможные названия событий для создания битвы
+        local createEvents = {"CreateBattle", "StartBattle", "BattleCreate", "Create", "Battle_Start"}
+        local createEvent, foundName = FindEvent(createEvents)
+        
+        if createEvent then
+            if createEvent:IsA("RemoteFunction") then
+                createEvent:InvokeServer(caseName)
+            elseif createEvent:IsA("RemoteEvent") then
+                createEvent:FireServer(caseName)
+            end
+            StatusLabel.Text = "⚔️ Создаю битву с кейсом: " .. caseName
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function SelectCase(caseName)
+    pcall(function()
+        -- Пробуем разные варианты выбора кейса
+        local selectEvents = {"SelectCase", "ChooseCase", "CaseSelect", "SetCase", "Choose"}
+        local selectEvent, foundName = FindEvent(selectEvents)
+        
+        if selectEvent then
+            if selectEvent:IsA("RemoteFunction") then
+                selectEvent:InvokeServer(caseName)
+            elseif selectEvent:IsA("RemoteEvent") then
+                selectEvent:FireServer(caseName)
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function AddCase(caseName)
+    pcall(function()
+        -- Кнопка + для добавления кейса в битву
+        local addEvents = {"AddCase", "PlusCase", "CasePlus", "Add", "Increase"}
+        local addEvent, foundName = FindEvent(addEvents)
+        
+        if addEvent then
+            if addEvent:IsA("RemoteFunction") then
+                addEvent:InvokeServer(caseName)
+            elseif addEvent:IsA("RemoteEvent") then
+                addEvent:FireServer(caseName)
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function ConfirmCreate()
+    pcall(function()
+        -- Кнопка Create/Создать
+        local confirmEvents = {"ConfirmCreate", "CreateConfirm", "Confirm", "Create", "Done"}
+        local confirmEvent, foundName = FindEvent(confirmEvents)
+        
+        if confirmEvent then
+            if confirmEvent:IsA("RemoteFunction") then
+                confirmEvent:InvokeServer()
+            elseif confirmEvent:IsA("RemoteEvent") then
+                confirmEvent:FireServer()
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function PlayWithBot()
+    pcall(function()
+        -- Игра с ботом
+        local botEvents = {"PlayWithBot", "BotBattle", "BattleBot", "StartBot", "BotPlay"}
+        local botEvent, foundName = FindEvent(botEvents)
+        
+        if botEvent then
+            if botEvent:IsA("RemoteFunction") then
+                botEvent:InvokeServer()
+            elseif botEvent:IsA("RemoteEvent") then
+                botEvent:FireServer()
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function ClaimReward()
+    pcall(function()
+        -- Забрать награду
+        local claimEvents = {"ClaimReward", "Claim", "Collect", "GetReward", "RewardClaim"}
+        local claimEvent, foundName = FindEvent(claimEvents)
+        
+        if claimEvent then
+            if claimEvent:IsA("RemoteFunction") then
+                claimEvent:InvokeServer()
+            elseif claimEvent:IsA("RemoteEvent") then
+                claimEvent:FireServer()
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+local function CloseBattle()
+    pcall(function()
+        -- Закрыть окно битвы
+        local closeEvents = {"CloseBattle", "Close", "Exit", "BattleClose", "Cancel"}
+        local closeEvent, foundName = FindEvent(closeEvents)
+        
+        if closeEvent then
+            if closeEvent:IsA("RemoteFunction") then
+                closeEvent:InvokeServer()
+            elseif closeEvent:IsA("RemoteEvent") then
+                closeEvent:FireServer()
+            end
+            return true
+        end
+        return false
+    end)
+    return false
+end
+
+-- ========== ОСНОВНОЙ ЦИКЛ ФАРМА БИТВ ==========
+local function BattleLoop()
+    while Farming do
+        for _, caseName in ipairs(SelectedCases) do
+            if not Farming then break end
+            
+            pcall(function()
+                StatusLabel.Text = "⚔️ Обработка кейса: " .. caseName
+                
+                -- 1. Создать битву
+                CreateBattle(caseName)
+                task.wait(0.5)
+                
+                -- 2. Выбрать кейс
+                SelectCase(caseName)
+                task.wait(0.3)
+                
+                -- 3. Нажать + (если нужно добавить)
+                AddCase(caseName)
+                task.wait(0.3)
+                
+                -- 4. Подтвердить создание
+                ConfirmCreate()
+                task.wait(0.5)
+                
+                -- 5. Играть с ботом
+                PlayWithBot()
+                task.wait(1)
+                
+                -- 6. Забрать награду (если включено)
+                if AutoClaim then
+                    ClaimReward()
+                    task.wait(0.3)
+                end
+                
+                -- 7. Закрыть окно битвы
+                CloseBattle()
+                task.wait(0.3)
+                
+                StatusLabel.Text = "✅ Битва завершена: " .. caseName
+            end)
+            
+            task.wait(FarmDelay)
+        end
+        
+        -- Пауза между полными циклами всех кейсов
+        task.wait(1)
+    end
+end
+
+StartBtn.MouseButton1Click:Connect(function()
+    if not Farming then
+        if #SelectedCases == 0 then
+            StatusLabel.Text = "⚠ ВЫБЕРИТЕ КЕЙСЫ ДЛЯ БИТВ!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            task.wait(1.5)
+            StatusLabel.Text = "⚡ ГОТОВ"
+            StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            return
+        end
+        
+        Farming = true
+        StartBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 50)
+        StartBtn.Text = "⏹ СТОП"
+        StatusLabel.Text = "⚔️ ФАРМ БИТВ АКТИВЕН"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 150, 255)
+        task.spawn(BattleLoop)
+    else
+        Farming = false
+        StartBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+        StartBtn.Text = "▶ ФАРМ БИТВ"
+        StatusLabel.Text = "⚡ СТОП"
+        StatusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+end)
+
+-- ========== ВЫВОД ВСЕХ СОБЫТИЙ В КОНСОЛЬ ==========
+local function DebugEvents()
+    print("========== ПОИСК СОБЫТИЙ ==========")
+    local function scanContainer(container, path)
+        for _, child in pairs(container:GetChildren()) do
+            if child:IsA("RemoteEvent") or child:IsA("RemoteFunction") then
+                print(path .. child.Name)
+            elseif child:IsA("Folder") or child:IsA("ModuleScript") then
+                scanContainer(child, path .. child.Name .. "/")
+            end
+        end
+    end
+    scanContainer(ReplicatedStorage, "ReplicatedStorage/")
+    print("====================================")
+end
+
+-- ЗАПУСК
+RefreshCaseList()
+UpdateClaimUI()
+UpdateSelectedInfo()
+DebugEvents()
+
+print("✅ BATTLE FARM ROBINA LOADED!")
+print("👑 Created by TROTULOV39 (ID: " .. CREATOR_ID .. ")")
+print("⚔️ Скрипт ищет события: CreateBattle, SelectCase, Claim и другие")
