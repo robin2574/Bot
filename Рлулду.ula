@@ -1,0 +1,637 @@
+-- ==================================================================
+-- NFT BATTLE - ULTIMATE MEGA DUMPER v5.0
+-- Збирає ВСІ МОЖЛИВІ дані з гри
+-- ==================================================================
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local LP = Players.LocalPlayer
+
+-- ==================================================================
+-- СТВОРЕННЯ КНОПКИ
+-- ==================================================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "MegaDumper"
+gui.Parent = LP:WaitForChild("PlayerGui")
+
+local btn = Instance.new("TextButton")
+btn.Name = "DumpBtn"
+btn.Text = "📋 КОПИРОВАТЬ ВСЕ ДАННЫЕ (MEGA DUMP)"
+btn.Size = UDim2.new(0, 300, 0, 60)
+btn.Position = UDim2.new(1, -310, 0, 10)
+btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+btn.BorderSizePixel = 2
+btn.BorderColor3 = Color3.fromRGB(0, 255, 255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 13
+btn.BackgroundTransparency = 0.5
+btn.Parent = gui
+
+local statusTxt = Instance.new("TextLabel")
+statusTxt.Name = "Status"
+statusTxt.Text = "⚡ ГОТОВ. НАЖМИ КНОПКУ"
+statusTxt.Size = UDim2.new(0, 300, 0, 30)
+statusTxt.Position = UDim2.new(1, -310, 0, 75)
+statusTxt.BackgroundTransparency = 1
+statusTxt.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusTxt.Font = Enum.Font.Gotham
+statusTxt.TextSize = 11
+statusTxt.Parent = gui
+
+-- ==================================================================
+-- ФУНКЦІЯ ОНОВЛЕННЯ СТАТУСУ
+-- ==================================================================
+local function setStatus(text)
+    statusTxt.Text = text
+    task.wait()
+end
+
+-- ==================================================================
+-- 1. ІНФОРМАЦІЯ ПРО ГРУ ТА ГРАВЦЯ
+-- ==================================================================
+local function getGameInfo()
+    local t = {}
+    t[#t+1] = "=":rep(70)
+    t[#t+1] = "🔥 NFT BATTLE - ULTIMATE MEGA DUMP v5.0"
+    t[#t+1] = "=":rep(70)
+    t[#t+1] = "Дата: " .. os.date("%Y-%m-%d %H:%M:%S")
+    t[#t+1] = "Гравець: " .. LP.Name
+    t[#t+1] = "DisplayName: " .. LP.DisplayName
+    t[#t+1] = "UserID: " .. LP.UserId
+    t[#t+1] = "AccountAge: " .. LP.AccountAge .. " днів"
+    t[#t+1] = "PlaceID: " .. game.PlaceId
+    t[#t+1] = "GameID: " .. game.GameId
+    t[#t+1] = "JobID: " .. game.JobId
+    t[#t+1] = "PrivateServerID: " .. game.PrivateServerId
+    t[#t+1] = "Назва гри: " .. game.Name
+    t[#t+1] = "Творець: " .. game.Creator.Name
+    t[#t+1] = "=":rep(70)
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 2. ВСІ ВАЛЮТИ ГРАВЦЯ
+-- ==================================================================
+local function getCurrencies()
+    local t = {"=== ВАЛЮТЫ ==="}
+    local list = {"_StarsValue", "_TONValue", "_GemsValue", "_SnowflakesValue", "_PumpkinsValue"}
+    for _, name in ipairs(list) do
+        local val = LP:FindFirstChild(name)
+        if val then t[#t+1] = name .. ": " .. val.Value end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 3. ВСІ СТАТИСТИКИ
+-- ==================================================================
+local function getStats()
+    local t = {"=== СТАТИСТИКА ==="}
+    local list = {"_CasesOpened", "_UpgradesMade", "_InventorySlots", "_BPLevel", "_BPXP", "_BPPremium", "_PlaytimeCount", "_PlaytimeReward", "_DailyCount", "_Donated"}
+    for _, name in ipairs(list) do
+        local val = LP:FindFirstChild(name)
+        if val then t[#t+1] = name .. ": " .. val.Value end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 4. ВСІ ТАЙМЕРИ
+-- ==================================================================
+local function getTimers()
+    local t = {"=== ТАЙМЕРЫ ==="}
+    local list = {"_DayT", "_WeekT", "_WT", "_DT", "_Daily", "_ChristmasTimer", "_HalloweenTimer"}
+    for _, name in ipairs(list) do
+        local val = LP:FindFirstChild(name)
+        if val then
+            local timeLeft = val.Value - os.time()
+            t[#t+1] = name .. ": " .. val.Value .. " (до скидання: " .. math.floor(timeLeft/3600) .. " год)"
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 5. ВСІ ПОСИЛЕННЯ (Лакі поціони тощо)
+-- ==================================================================
+local function getBoosts()
+    local t = {"=== ПОСИЛЕНИЯ ==="}
+    local boosts = {"_LuckyPotion", "_LuckyPotion2", "_HalloweenSpins", "_ChristmasSpins", "_ArcadeSpins"}
+    for _, name in ipairs(boosts) do
+        local val = LP:FindFirstChild(name)
+        if val and val.Value > 0 then t[#t+1] = name .. ": " .. val.Value end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 6. ВСІ ГЕЙМПАСИ ГРАВЦЯ
+-- ==================================================================
+local function getGamepasses()
+    local t = {"=== ГЕЙМПАСЫ ==="}
+    local passes = {"_1628441770", "_1639564273", "_1640776898", "_1648071738", "_1651738174"}
+    local names = {"FastUpgrade", "VIP", "Battlepass", "DoubleStars", "AutoOpen"}
+    for i, name in ipairs(passes) do
+        local val = LP:FindFirstChild(name)
+        if val then t[#t+1] = names[i] .. " (" .. name .. "): " .. (val.Value == 1 and "Куплено" or "Не куплено") end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 7. ВСІ ЗНАЧЕННЯ ГРАВЦЯ (ВСІ Value об'єкти)
+-- ==================================================================
+local function getAllValues()
+    local t = {"=== ВСЕ ЗНАЧЕНИЯ PLAYER ==="}
+    local function scan(inst, depth)
+        if depth > 2 then return end
+        for _, ch in ipairs(inst:GetChildren()) do
+            local cn = ch.ClassName
+            if cn == "NumberValue" or cn == "StringValue" or cn == "IntValue" or cn == "BoolValue" then
+                t[#t+1] = ch.Name .. " = " .. tostring(ch.Value)
+            elseif cn == "Folder" and depth < 2 then
+                t[#t+1] = "[" .. ch.Name .. "]"
+                scan(ch, depth+1)
+            end
+        end
+    end
+    scan(LP, 0)
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 8. ВСІ АТРИБУТИ ГРАВЦЯ
+-- ==================================================================
+local function getAttributes()
+    local t = {"=== АТРИБУТЫ ИГРОКА ==="}
+    for k, v in pairs(LP:GetAttributes()) do
+        t[#t+1] = k .. " = " .. tostring(v)
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 9. ВЕСЬ ІНВЕНТАР (_Inventory)
+-- ==================================================================
+local function getInventory()
+    local t = {"=== ИНВЕНТАРЬ (" .. (#LP:FindFirstChild("_Inventory") and #LP._Inventory:GetChildren() or 0) .. " предметов) ==="}
+    local inv = LP:FindFirstChild("_Inventory")
+    if inv then
+        for _, item in ipairs(inv:GetChildren()) do
+            t[#t+1] = "📦 " .. item.Name
+            for k, v in pairs(item:GetAttributes()) do
+                t[#t+1] = "    " .. k .. ": " .. tostring(v)
+            end
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 10. ВЕСЬ ІНДЕКС (_Index) - досягнення
+-- ==================================================================
+local function getIndex()
+    local t = {"=== ИНДЕКС / ДОСТИЖЕНИЯ ==="}
+    local idx = LP:FindFirstChild("_Index")
+    if idx then
+        local collected = 0
+        for _, item in ipairs(idx:GetChildren()) do
+            if item.Value > 0 then collected = collected + 1 end
+            t[#t+1] = item.Name .. ": " .. item.Value
+        end
+        t[#t+1] = "ВСЬОГО ЗІБРАНО: " .. collected .. "/" .. #idx:GetChildren()
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 11. ПЛАТНІ КЕЙСИ (_PaidCases)
+-- ==================================================================
+local function getPaidCases()
+    local t = {"=== ПЛАТНЫЕ КЕЙСЫ ==="}
+    local paid = LP:FindFirstChild("_PaidCases")
+    if paid then
+        for _, case in ipairs(paid:GetChildren()) do
+            t[#t+1] = case.Name .. ": " .. case.Value .. " шт"
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 12. ВСІ ЗАВДАННЯ (_TasksFolder)
+-- ==================================================================
+local function getTasks()
+    local t = {"=== ЗАДАНИЯ ==="}
+    local tasks = LP:FindFirstChild("_TasksFolder")
+    if tasks then
+        for _, task in ipairs(tasks:GetChildren()) do
+            t[#t+1] = task.Name .. ": " .. task.Value
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 13. БЕТЛПАС (_BPClaimed)
+-- ==================================================================
+local function getBattlepass()
+    local t = {"=== БАТЛПАС (награды) ==="}
+    local bp = LP:FindFirstChild("_BPClaimed")
+    if bp then
+        local free = 0
+        local prem = 0
+        for _, claim in ipairs(bp:GetChildren()) do
+            if claim.Value then
+                if claim.Name:find("Free") then free = free + 1
+                elseif claim.Name:find("Prem") then prem = prem + 1 end
+            end
+        end
+        t[#t+1] = "Взято бесплатных: " .. free
+        t[#t+1] = "Взято премиум: " .. prem
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 14. ВСІ RemoteEvents та RemoteFunctions
+-- ==================================================================
+local function getRemotes()
+    local t = {"=== REMOTE EVENTS & FUNCTIONS ==="}
+    local function scan(inst, path)
+        for _, ch in ipairs(inst:GetChildren()) do
+            local cn = ch.ClassName
+            if cn == "RemoteEvent" then
+                t[#t+1] = "📡 RemoteEvent: " .. path .. "." .. ch.Name
+            elseif cn == "RemoteFunction" then
+                t[#t+1] = "⚡ RemoteFunction: " .. path .. "." .. ch.Name
+            elseif cn == "BindableEvent" then
+                t[#t+1] = "🔗 BindableEvent: " .. path .. "." .. ch.Name
+            elseif cn == "Folder" then
+                scan(ch, path .. "." .. ch.Name)
+            end
+        end
+    end
+    scan(ReplicatedStorage, "ReplicatedStorage")
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 15. ВСІ ModuleScripts
+-- ==================================================================
+local function getModules()
+    local t = {"=== MODULE SCRIPTS ==="}
+    local function scan(inst, path)
+        for _, ch in ipairs(inst:GetChildren()) do
+            if ch.ClassName == "ModuleScript" then
+                t[#t+1] = "📦 " .. path .. "." .. ch.Name
+                local ok, res = pcall(require, ch)
+                if ok and type(res) == "table" then
+                    for k, v in pairs(res) do
+                        if type(v) ~= "function" and type(v) ~= "table" then
+                            t[#t+1] = "    " .. k .. " = " .. tostring(v)
+                        end
+                    end
+                end
+            elseif ch.ClassName == "Folder" then
+                scan(ch, path .. "." .. ch.Name)
+            end
+        end
+    end
+    scan(ReplicatedStorage, "ReplicatedStorage")
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 16. ВСІ LocalScripts
+-- ==================================================================
+local function getLocalScripts()
+    local t = {"=== LOCAL SCRIPTS ==="}
+    local gui = LP:FindFirstChild("PlayerGui")
+    if gui then
+        local function scan(inst, path)
+            for _, ch in ipairs(inst:GetChildren()) do
+                if ch.ClassName == "LocalScript" then
+                    t[#t+1] = "📜 " .. path .. "." .. ch.Name
+                    local src = ch.Source
+                    if src and #src > 0 then
+                        t[#t+1] = string.sub(src, 1, 500) .. (string.len(src) > 500 and "..." or "")
+                    end
+                elseif ch.ClassName == "Frame" or ch.ClassName == "ScrollingFrame" or ch.ClassName == "Folder" or ch.ClassName == "ScreenGui" then
+                    scan(ch, path .. "." .. ch.Name)
+                end
+            end
+        end
+        scan(gui, "PlayerGui")
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 17. ВСІ ЗВУКИ
+-- ==================================================================
+local function getSounds()
+    local t = {"=== ЗВУКИ ==="}
+    local sounds = ReplicatedStorage:FindFirstChild("Sounds")
+    if sounds then
+        for _, s in ipairs(sounds:GetChildren()) do
+            if s.ClassName == "Sound" then
+                t[#t+1] = "🔊 " .. s.Name .. " = " .. s.SoundId
+            end
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 18. ВСІ КНОПКИ GUI
+-- ==================================================================
+local function getAllButtons()
+    local t = {"=== ВСЕ КНОПКИ GUI ==="}
+    local gui = LP:FindFirstChild("PlayerGui")
+    if gui then
+        local function scan(inst, path)
+            for _, ch in ipairs(inst:GetChildren()) do
+                if ch:IsA("TextButton") or ch:IsA("ImageButton") then
+                    t[#t+1] = "🔘 " .. path .. "." .. ch.Name
+                    if ch.Text and ch.Text ~= "" then t[#t+1] = "    Текст: " .. ch.Text end
+                elseif ch:IsA("Frame") or ch:IsA("ScrollingFrame") or ch:IsA("ScreenGui") then
+                    scan(ch, path .. "." .. ch.Name)
+                end
+            end
+        end
+        scan(gui, "PlayerGui")
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 19. ГЛОБАЛЬНІ ЗМІННІ (_G)
+-- ==================================================================
+local function getGlobals()
+    local t = {"=== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (_G) ==="}
+    for k, v in pairs(_G) do
+        local typ = type(v)
+        if typ == "string" then
+            t[#t+1] = k .. " = \"" .. v .. "\""
+        elseif typ == "number" or typ == "boolean" then
+            t[#t+1] = k .. " = " .. tostring(v)
+        elseif typ == "table" then
+            t[#t+1] = k .. " = {ТАБЛИЦА}"
+        elseif typ == "function" then
+            t[#t+1] = k .. " = function()"
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 20. ВСІ ID ЗОБРАЖЕНЬ З МОДУЛЯ INFO
+-- ==================================================================
+local function getImageIds()
+    local t = {"=== ВСЕ ИЗОБРАЖЕНИЯ (Image IDs) ==="}
+    local ok, info = pcall(require, ReplicatedStorage:FindFirstChild("Info"))
+    if ok and info then
+        t[#t+1] = "--- GIFTS ---"
+        for name, data in pairs(info.Gifts or {}) do
+            if data.Image then t[#t+1] = name .. ": rbxassetid://" .. data.Image end
+        end
+        t[#t+1] = "--- CASES ---"
+        for name, data in pairs(info.Cases or {}) do
+            if data.Image then t[#t+1] = name .. ": rbxassetid://" .. data.Image end
+        end
+        t[#t+1] = "--- PATTERNS ---"
+        for name, id in pairs(info.Patterns or {}) do
+            t[#t+1] = name .. ": rbxassetid://" .. id
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 21. ВСІ КЕЙСИ ТА ЇХ ДРОПИ
+-- ==================================================================
+local function getCases()
+    local t = {"=== ВСЕ КЕЙСЫ И ДРОПЫ ==="}
+    local ok, info = pcall(require, ReplicatedStorage:FindFirstChild("Info"))
+    if ok and info then
+        for name, data in pairs(info.Cases or {}) do
+            t[#t+1] = "📦 " .. name
+            t[#t+1] = "    Цена: " .. (data.Price or "?")
+            t[#t+1] = "    Тип: " .. (data.TON and "TON" or data.GEMS and "GEMS" or data.Paid and "PAID" or "ЗВЕЗДЫ")
+            if data.Drop then
+                t[#t+1] = "    ДРОП:"
+                for _, drop in ipairs(data.Drop) do
+                    t[#t+1] = "        - " .. drop[1] .. " (" .. drop[2] .. "%)"
+                end
+            end
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 22. ВСІ ЗАВДАННЯ З ІНФО
+-- ==================================================================
+local function getTasksInfo()
+    local t = {"=== СПИСОК ЗАДАНИЙ ==="}
+    local ok, info = pcall(require, ReplicatedStorage:FindFirstChild("Info"))
+    if ok and info and info.Tasks then
+        for name, data in pairs(info.Tasks) do
+            t[#t+1] = "📋 " .. name
+            t[#t+1] = "    Заголовок: " .. (data.Heading or "?")
+            t[#t+1] = "    Цель: " .. (data.Goal or "?")
+            t[#t+1] = "    Награда: " .. (data.Reward or "?")
+            t[#t+1] = "    XP: " .. (data.XPReward or "?")
+            t[#t+1] = "    Длительность: " .. (data.Duration or "?")
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 23. ДАНІ З ReplicatedStorage (Leaderboards, LuckValue тощо)
+-- ==================================================================
+local function getRSValues()
+    local t = {"=== ЗНАЧЕНИЯ ReplicatedStorage ==="}
+    local list = {"Leaderboards", "LuckValue", "LuckValue2", "CrossValue", "x2Snowflakes"}
+    for _, name in ipairs(list) do
+        local val = ReplicatedStorage:FindFirstChild(name)
+        if val then
+            if val.ClassName == "NumberValue" or val.ClassName == "IntValue" then
+                t[#t+1] = name .. ": " .. val.Value
+            end
+        end
+    end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 24. НАЙКРАЩИЙ ДРОП ГРАВЦЯ
+-- ==================================================================
+local function getBestDrop()
+    local t = {"=== ЛУЧШИЙ ДРОП ==="}
+    local best = LP:FindFirstChild("_BestDrop")
+    if best then t[#t+1] = best.Value end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- 25. ТЕМА ОФОРМЛЕННЯ
+-- ==================================================================
+local function getTheme()
+    local t = {"=== ТЕМА ОФОРМЛЕНИЯ ==="}
+    local theme = LP:FindFirstChild("_Theme")
+    if theme then t[#t+1] = "Тема: " .. theme.Value end
+    t[#t+1] = ""
+    return t
+end
+
+-- ==================================================================
+-- ГОЛОВНА ФУНКЦІЯ ЗБОРУ
+-- ==================================================================
+local function collectAll()
+    setStatus("🔄 ЗБІР ДАНИХ... (1/24)")
+    local data = getGameInfo()
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (2/24)")
+    for _, v in ipairs(getCurrencies()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (3/24)")
+    for _, v in ipairs(getStats()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (4/24)")
+    for _, v in ipairs(getTimers()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (5/24)")
+    for _, v in ipairs(getBoosts()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (6/24)")
+    for _, v in ipairs(getGamepasses()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (7/24)")
+    for _, v in ipairs(getAllValues()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (8/24)")
+    for _, v in ipairs(getAttributes()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (9/24) - Інвентар")
+    for _, v in ipairs(getInventory()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (10/24) - Індекс")
+    for _, v in ipairs(getIndex()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (11/24)")
+    for _, v in ipairs(getPaidCases()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (12/24)")
+    for _, v in ipairs(getTasks()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (13/24)")
+    for _, v in ipairs(getBattlepass()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (14/24)")
+    for _, v in ipairs(getRemotes()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (15/24)")
+    for _, v in ipairs(getModules()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (16/24) - Скрипти")
+    for _, v in ipairs(getLocalScripts()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (17/24)")
+    for _, v in ipairs(getSounds()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (18/24) - Кнопки")
+    for _, v in ipairs(getAllButtons()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (19/24)")
+    for _, v in ipairs(getGlobals()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (20/24)")
+    for _, v in ipairs(getImageIds()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (21/24)")
+    for _, v in ipairs(getCases()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (22/24)")
+    for _, v in ipairs(getTasksInfo()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (23/24)")
+    for _, v in ipairs(getRSValues()) do data[#data+1] = v end
+    
+    setStatus("🔄 ЗБІР ДАНИХ... (24/24)")
+    for _, v in ipairs(getBestDrop()) do data[#data+1] = v end
+    for _, v in ipairs(getTheme()) do data[#data+1] = v end
+    
+    data[#data+1] = "=":rep(70)
+    data[#data+1] = "✅ ДАМП ЗАВЕРШЕН. ВСЬОГО РЯДКІВ: " .. #data
+    data[#data+1] = "=":rep(70)
+    
+    return table.concat(data, "\n")
+end
+
+-- ==================================================================
+-- НАТИСКАННЯ КНОПКИ
+-- ==================================================================
+btn.MouseButton1Click:Connect(function()
+    task.spawn(function()
+        btn.Text = "⏳ ЗБІР ДАНИХ..."
+        btn.BackgroundColor3 = Color3.fromRGB(100, 100, 0)
+        
+        local result = collectAll()
+        
+        btn.Text = "📋 КОПІЮВАННЯ..."
+        task.wait(0.3)
+        
+        local ok, err = pcall(function()
+            setclipboard(result)
+        end)
+        
+        if ok then
+            btn.Text = "✅ ГОТОВО! СКОПІЙОВАНО!"
+            btn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+            local lines = select(2, string.gsub(result, "\n", "\n")) + 1
+            statusTxt.Text = "✅ " .. lines .. " рядків скопійовано!"
+            task.wait(2)
+            btn.Text = "📋 КОПИРОВАТЬ ВСЕ ДАННЫЕ (MEGA DUMP)"
+            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            statusTxt.Text = "⚡ ГОТОВ. НАЖМИ КНОПКУ"
+        else
+            btn.Text = "❌ ПОМИЛКА!"
+            statusTxt.Text = "❌ " .. tostring(err)
+            task.wait(2)
+            btn.Text = "📋 КОПИРОВАТЬ ВСЕ ДАННЫЕ (MEGA DUMP)"
+            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            statusTxt.Text = "⚡ ГОТОВ. НАЖМИ КНОПКУ"
+        end
+    end)
+end)
+
+print("✅ MEGA DUMPER ЗАВАНТАЖЕНО! Натисни жовто-блакитну кнопку")
